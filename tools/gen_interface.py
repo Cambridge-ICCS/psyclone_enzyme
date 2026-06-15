@@ -273,6 +273,47 @@ def _intent_from_prefix(prefix):
     return "unknown"
 
 
+# ---------------------------------------------------------------------------
+# Extraction: PSyIR symbols -> model
+# ---------------------------------------------------------------------------
+
+
+def _dummy_from_symbol(sym):
+    """Build a :class:`DummyArg` from a PSyIR data symbol.
+
+    Populates the fields resolved so far -- ``name``, ``base_type``,
+    ``intent``, ``is_active`` and the raw declaration text. The remaining
+    fields (kind, rank/shape, attributes, derived-type and coarray details)
+    stay at their defaults until their extractors are added.
+    """
+    _, raw_decl = unwrap_unsupported(sym.datatype)
+    base_type = get_base_type(sym)
+    return DummyArg(
+        name=sym.name,
+        arg_kind="data",  # TODO: detect procedure dummies
+        base_type=base_type,
+        type_spec_raw=None,  # TODO: gen_vardecl prefix (needed for emit)
+        kind=None,  # TODO
+        char_len=None,  # TODO
+        derived_type_name=None,  # TODO
+        derived_type_params=None,
+        is_polymorphic=False,
+        is_unlimited_polymorphic=False,
+        is_assumed_type=False,
+        rank=None,  # TODO: _rank_and_shape
+        shape_kind=None,  # TODO: _rank_and_shape
+        shape_raw=None,
+        is_coarray=False,
+        corank=None,
+        coshape_raw=None,
+        intent=get_intent(sym),
+        attributes=frozenset(),  # TODO: _attributes_from_prefix
+        raw_text=raw_decl,
+        unsupported_reason=None,
+        is_active=base_type in ("real", "complex"),
+    )
+
+
 SOURCE = """
 subroutine normalise_value(n, x, y)
   integer, value, intent(in) :: n
