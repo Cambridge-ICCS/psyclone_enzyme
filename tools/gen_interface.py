@@ -99,18 +99,30 @@ class ProcedureSignature:
 def get_intent(sym):
     """Map a symbol's argument access onto an ``Intent`` string.
 
-    Non-argument symbols (e.g. locals) have no intent, so they fall
-    back to ``"unknown"``.
+    Non-argument symbols (locals, a function's result symbol, imported
+    symbols) are not ``ArgumentInterface`` and have no intent, so they
+    fall back to ``"unknown"``. ``VALUE`` arguments arrive as an
+    ``UnsupportedFortranType`` with ``Access.UNKNOWN``, so when the
+    structured access is unknown we recover the intent from the raw
+    declaration text.
     """
     if not isinstance(sym.interface, ArgumentInterface):
         return "unknown"
 
-    return {
+    mapped = {
         Access.READ: "in",
         Access.WRITE: "out",
         Access.READWRITE: "inout",
         Access.UNKNOWN: "unknown",
     }[sym.interface.access]
+
+    if mapped != "unknown":
+        return mapped
+
+    _, raw_decl = unwrap_unsupported(sym.datatype)
+    if raw_decl:
+        return _intent_from_prefix(_decl_prefix(raw_decl))
+    return "unknown"
 
 
 def describe_type(sym):
@@ -175,8 +187,89 @@ def get_base_type(sym):
         return mapping.get(elem_type.intrinsic, "unknown")
 
     if raw_decl:
-        return "Fallback for raw text is to be implemented"
+        return _base_type_from_prefix(_decl_prefix(raw_decl))
 
+    return "unknown"
+
+
+def _split_top_level_commas(text):
+    """Split ``text`` on commas that are not nested inside parentheses.
+
+    Used to break a declaration prefix into its type/attribute tokens
+    without splitting inside ``dimension(...)``, ``intent(...)``, kind
+    selectors, etc.
+    """
+    parts = []
+    depth = 0
+    start = 0
+    for index, char in enumerate(text):
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        elif char == "," and depth == 0:
+            parts.append(text[start:index])
+            start = index + 1
+    parts.append(text[start:])
+    return parts
+
+
+def _decl_prefix(declaration):
+    """Return a declaration's attribute/type prefix (the text before ``::``).
+
+    For ``"integer, value, intent(in) :: n"`` this returns
+    ``"integer, value, intent(in)"``. A declaration with no ``::`` is
+    returned whole (stripped). Case is preserved -- callers lowercase
+    when matching.
+    """
+    return declaration.split("::", 1)[0].strip()
+
+
+# The five intrinsic *type classes* (BaseType) are real, complex, integer,
+# logical, character. "double precision" is the real
+# type with a double-precision kind, so it maps to "real" below.
+INTRINSIC_TYPES = (
+    "double precision",
+    "real",
+    "complex",
+    "integer",
+    "logical",
+    "character",
+)
+
+
+def _base_type_from_prefix(prefix):
+    """Classify the leading type token of a declaration prefix as a ``BaseType``.
+
+    Matching is case-insensitive. ``double precision`` maps to ``"real"``;
+    legacy ``complex*16`` and kind-qualified ``real(kind=8)`` match by their
+    leading word. Derived types (``type(...)``) and polymorphic ``class(...)``
+    are recognised. Anything else -- including ``procedure(...)`` dummies,
+    which are handled separately -- falls back to ``"unknown"``.
+    """
+    first = _split_top_level_commas(prefix)[0].strip().lower()
+    if first.startswith("type"):
+        return "derived"
+    if first.startswith("class"):
+        return "class"
+    for name in INTRINSIC_TYPES:
+        if first.startswith(name):
+            return "real" if name == "double precision" else name
+    return "unknown"
+
+
+def _intent_from_prefix(prefix):
+    """Recover an ``Intent`` from an ``intent(...)`` token in the prefix.
+
+    Matching is case-insensitive and tolerant of spaces (``intent ( in )``).
+    Returns ``"unknown"`` when no ``intent(...)`` token is present.
+    """
+    for token in _split_top_level_commas(prefix):
+        token = token.strip().lower()
+        if token.startswith("intent"):
+            inner = token[token.find("(") + 1 : token.rfind(")")].strip()
+            if inner in ("in", "out", "inout"):
+                return inner
     return "unknown"
 
 
@@ -190,26 +283,26 @@ end subroutine normalise_value
 """
 
 
-reader = FortranReader()
-psyir = reader.psyir_from_source(SOURCE)
+if __name__ == "__main__":
+    reader = FortranReader()
+    psyir = reader.psyir_from_source(SOURCE)
 
-routine = psyir.walk(Routine)[0]
+    routine = psyir.walk(Routine)[0]
 
-print("Routine:", routine.name)
-print("Arguments:")
+    print("Routine:", routine.name)
+    print("Arguments:")
 
-for sym in routine.symbol_table.argument_list:
-    print("  ", sym.name, sym.datatype, sym.interface)
-    dtype = sym.datatype
-    if isinstance(dtype, UnsupportedFortranType):
-        print("There is a Unsupported datatype:", dtype)
-        if dtype.partial_datatype:
+    for sym in routine.symbol_table.argument_list:
+        print("  ", sym.name, sym.datatype, sym.interface)
+        dtype = sym.datatype
+        if isinstance(dtype, UnsupportedFortranType):
+            print("There is a Unsupported datatype:", dtype)
+            if dtype.partial_datatype:
                 dtype = dtype.partial_datatype
                 print("Partial datatype:", dtype)
 
+    for sym in routine.symbol_table.argument_list:
+        print(sym.name, get_intent(sym))
 
-for sym in routine.symbol_table.argument_list:
-    print(sym.name, get_intent(sym))
-
-for sym in routine.symbol_table.argument_list:
-    print(describe_type(sym))
+    for sym in routine.symbol_table.argument_list:
+        print(describe_type(sym))
