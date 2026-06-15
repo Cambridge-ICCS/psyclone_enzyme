@@ -314,6 +314,34 @@ def _dummy_from_symbol(sym):
     )
 
 
+def extract_signature(routine):
+    """Build a :class:`ProcedureSignature` from a PSyIR ``Routine``.
+
+    Maps :func:`_dummy_from_symbol` over the argument list and records the
+    procedure kind (``function`` when the routine has a result symbol,
+    otherwise ``subroutine``).
+    """
+    return_symbol = getattr(routine, "return_symbol", None)
+    kind = "function" if return_symbol is not None else "subroutine"
+    args = tuple(
+        _dummy_from_symbol(sym) for sym in routine.symbol_table.argument_list
+    )
+    return_arg = (
+        _dummy_from_symbol(return_symbol) if return_symbol is not None else None
+    )
+    return ProcedureSignature(
+        name=routine.name,
+        kind=kind,
+        args=args,
+        return_arg=return_arg,
+        bind_c=False, # false as bind prime use is for activity descriptors
+        elemental=False,
+        pure=False,
+        module=None,  # TODO: _module_name
+        uses=(),  # TODO: collect use statements
+    )
+
+
 SOURCE = """
 subroutine normalise_value(n, x, y)
   integer, value, intent(in) :: n
