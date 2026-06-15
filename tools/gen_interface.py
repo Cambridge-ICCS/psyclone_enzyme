@@ -125,25 +125,6 @@ def get_intent(sym):
     return "unknown"
 
 
-def describe_type(sym):
-    """Summarise a symbol's type as a flat dict.
-
-    Reports the element base type, whether it is an array, its rank,
-    and any raw declaration text recovered from an unsupported type.
-    """
-    dtype, raw_decl = unwrap_unsupported(sym.datatype)
-
-    is_array = isinstance(dtype, ArrayType)
-    rank = len(dtype.shape) if is_array else 0
-
-    return {
-        "name": sym.name,
-        "is_array": is_array,
-        "rank": rank,
-        "base_type": get_base_type(sym),
-        "raw_text": raw_decl,
-    }
-
 def unwrap_unsupported(dtype):
     """Split an ``UnsupportedFortranType`` into its partial datatype.
 
@@ -353,25 +334,15 @@ end subroutine normalise_value
 
 
 if __name__ == "__main__":
+
     reader = FortranReader()
     psyir = reader.psyir_from_source(SOURCE)
-
     routine = psyir.walk(Routine)[0]
+    sig = extract_signature(routine)
 
-    print("Routine:", routine.name)
-    print("Arguments:")
-
-    for sym in routine.symbol_table.argument_list:
-        print("  ", sym.name, sym.datatype, sym.interface)
-        dtype = sym.datatype
-        if isinstance(dtype, UnsupportedFortranType):
-            print("There is a Unsupported datatype:", dtype)
-            if dtype.partial_datatype:
-                dtype = dtype.partial_datatype
-                print("Partial datatype:", dtype)
-
-    for sym in routine.symbol_table.argument_list:
-        print(sym.name, get_intent(sym))
-
-    for sym in routine.symbol_table.argument_list:
-        print(describe_type(sym))
+    print(f"{sig.kind} {sig.name}")
+    for arg in sig.args:
+        print(
+            f"  {arg.name}: base_type={arg.base_type}, "
+            f"intent={arg.intent}, is_active={arg.is_active}"
+        )
