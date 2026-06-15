@@ -254,6 +254,35 @@ def _intent_from_prefix(prefix):
     return "unknown"
 
 
+# Attribute keywords a data dummy argument may carry.
+# intent(...), dimension(...) and codimension[...] have dedicated fields
+# (intent, rank/shape_kind, coarray) so are excluded. bind(c) is excluded because a data dummy
+# argument cannot carry it (a BIND(C) variable must be a module variable or common block). 
+ATTRIBUTE_KEYWORDS = frozenset(
+    {
+        "value",
+        "optional",
+        "pointer",
+        "allocatable",
+        "target",
+        "contiguous",
+        "asynchronous",
+        "volatile",
+    }
+)
+
+
+def _attributes_from_prefix(prefix):
+    """Collect recognised attribute keywords (e.g. ``value``) from a prefix.
+
+    Tokens that carry arguments, such as ``intent(...)`` and ``dimension(...)``,
+    never match the keywords, so they are naturally excluded. Matching is
+    case-insensitive; the result is an unordered ``frozenset``.
+    """
+    tokens = {token.strip().lower() for token in _split_top_level_commas(prefix)}
+    return frozenset(tokens & ATTRIBUTE_KEYWORDS)
+
+
 # ---------------------------------------------------------------------------
 # Extraction: PSyIR symbols -> model
 # ---------------------------------------------------------------------------
@@ -262,13 +291,20 @@ def _intent_from_prefix(prefix):
 def _dummy_from_symbol(sym):
     """Build a :class:`DummyArg` from a PSyIR data symbol.
 
-    Populates the fields resolved so far -- ``name``, ``base_type``,
-    ``intent``, ``is_active`` and the raw declaration text. The remaining
-    fields (kind, rank/shape, attributes, derived-type and coarray details)
-    stay at their defaults until their extractors are added.
+    Populates the fields resolved so far: ``name``, ``base_type``,
+    ``intent``, ``attributes``, ``is_active`` and the raw declaration text.
+    The remaining fields (kind, rank/shape, derived-type and coarray
+    details) stay at their defaults until their extractors are added.
     """
     _, raw_decl = unwrap_unsupported(sym.datatype)
     base_type = get_base_type(sym)
+    # Attributes that matter (value, pointer, target, optional, contiguous)
+    # force the declaration to UnsupportedFortranType, so they are present in
+    # raw_decl; a fully supported symbol has none. (allocatable arrays stay
+    # supported, so that attribute is not captured here)
+    attributes = (
+        _attributes_from_prefix(_decl_prefix(raw_decl)) if raw_decl else frozenset()
+    )
     return DummyArg(
         name=sym.name,
         arg_kind="data",  # TODO: detect procedure dummies
@@ -288,7 +324,7 @@ def _dummy_from_symbol(sym):
         corank=None,
         coshape_raw=None,
         intent=get_intent(sym),
-        attributes=frozenset(),  # TODO: _attributes_from_prefix
+        attributes=attributes,
         raw_text=raw_decl,
         unsupported_reason=None,
         is_active=base_type in ("real", "complex"),
