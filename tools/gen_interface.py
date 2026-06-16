@@ -288,6 +288,33 @@ def _attributes_from_prefix(prefix):
 # ---------------------------------------------------------------------------
 
 
+def _rank_and_shape(sym):
+    """Return ``(rank, shape_kind)`` for a symbol.
+
+    Explicit-shape and multi-rank arrays carry an ``ArrayBounds`` per
+    dimension. Assumed-shape dummies (``dimension(:)``) use
+    ``Extent.ATTRIBUTE``; deferred allocatable/pointer arrays use
+    ``Extent.DEFERRED``. Assumed-size (``dimension(*)``) is not modelled by
+    PSyclone, arriving as an ``UnsupportedFortranType``; it is reported as
+    ``(None, None)`` rather than mislabelled scalar. (Assumed-rank
+    ``dimension(..)`` does not reach here: fparser fails to parse it.)
+    """
+    dtype, raw_decl = unwrap_unsupported(sym.datatype)
+
+    if isinstance(dtype, ArrayType):
+        rank = len(dtype.shape)
+        if any(dim is ArrayType.Extent.DEFERRED for dim in dtype.shape):
+            return rank, "deferred"
+        if any(dim is ArrayType.Extent.ATTRIBUTE for dim in dtype.shape):
+            return rank, "assumed_shape"
+        return rank, "explicit"
+
+    if raw_decl and "dimension(" in _decl_prefix(raw_decl).lower():
+        return None, None  # an array PSyclone could not resolve
+
+    return 0, "scalar"
+
+
 def _dummy_from_symbol(sym):
     """Build a :class:`DummyArg` from a PSyIR data symbol.
 
@@ -298,6 +325,7 @@ def _dummy_from_symbol(sym):
     """
     _, raw_decl = unwrap_unsupported(sym.datatype)
     base_type = get_base_type(sym)
+    rank, shape_kind = _rank_and_shape(sym)
     # Attributes that matter (value, pointer, target, optional, contiguous)
     # force the declaration to UnsupportedFortranType, so they are present in
     # raw_decl; a fully supported symbol has none. (allocatable arrays stay
@@ -317,8 +345,8 @@ def _dummy_from_symbol(sym):
         is_polymorphic=False,
         is_unlimited_polymorphic=False,
         is_assumed_type=False,
-        rank=None,  # TODO: _rank_and_shape
-        shape_kind=None,  # TODO: _rank_and_shape
+        rank=rank,
+        shape_kind=shape_kind,
         shape_raw=None,
         is_coarray=False,
         corank=None,
