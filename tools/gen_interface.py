@@ -387,6 +387,29 @@ def extract_signature(routine):
     )
 
 
+# ---------------------------------------------------------------------------
+# Rules: reverse-mode interface synthesis
+# ---------------------------------------------------------------------------
+
+
+def reverse_mode_shadow_intent(procedure_kind, primal_intent):
+    """Map a primal argument's intent to its reverse-mode shadow intent.
+
+    The mapping depends on the procedure kind (verified against the reverse
+    goldens). A subroutine input produces a derivative output (in to out); a
+    subroutine output must be seeded and is then incremented (out to inout). A
+    function is mapped to "inout" for now.
+    """
+    if procedure_kind == "function":
+        return "inout"
+    return {
+        "in": "out",
+        "out": "inout",
+        "inout": "inout",
+        "unknown": "inout",
+    }[primal_intent]
+
+
 SOURCE = """
 subroutine normalise_value(n, x, y)
   integer, value, intent(in) :: n
