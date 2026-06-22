@@ -420,6 +420,28 @@ end subroutine normalise_value
 """
 
 
+def _format_dummy(arg):
+    """Render one extracted :class:`DummyArg` as an indented block.
+
+    Shows the fields the extraction layer currently populates; the raw
+    declaration is included only when PSyclone left the type unsupported
+    (so it carries information the structured fields do not). The
+    remaining model fields stay at their TODO defaults.
+    """
+    lines = [
+        f"  {arg.name} ({arg.arg_kind}):",
+        f"    base_type  = {arg.base_type}",
+        f"    rank       = {arg.rank}",
+        f"    shape_kind = {arg.shape_kind}",
+        f"    intent     = {arg.intent}",
+        f"    attributes = {sorted(arg.attributes)}",
+        f"    is_active  = {arg.is_active}",
+    ]
+    if arg.raw_text:
+        lines.append(f"    raw_text   = {arg.raw_text!r}")
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
 
     reader = FortranReader()
@@ -429,7 +451,8 @@ if __name__ == "__main__":
 
     print(f"{sig.kind} {sig.name}")
     for arg in sig.args:
-        print(
-            f"  {arg.name}: base_type={arg.base_type}, "
-            f"intent={arg.intent}, is_active={arg.is_active}"
-        )
+        print(_format_dummy(arg))
+    # checks if function or subroutine
+    if sig.return_arg is not None:
+        print("  returns:")
+        print(_format_dummy(sig.return_arg))
