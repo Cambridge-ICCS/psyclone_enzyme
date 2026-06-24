@@ -156,6 +156,20 @@ class InterfaceArg:
     attributes: frozenset[str]
 
 
+@dataclass(frozen=True)
+class CallbackInterface:
+    """The nested interface describing the callback procedure's signature.
+
+    Mirrors the primal routine. ``result_type`` is the function result type
+    (e.g. ``"real"``) for a function primal, or ``None`` for a subroutine.
+    """
+
+    name: str
+    kind: ProcedureKind
+    args: tuple[InterfaceArg, ...]
+    result_type: str | None
+
+
 def get_intent(sym: Symbol) -> Intent:
     """Map a symbol's argument access onto an ``Intent`` string.
 
