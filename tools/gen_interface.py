@@ -170,6 +170,38 @@ class CallbackInterface:
     result_type: str | None
 
 
+@dataclass(frozen=True)
+class AutodiffInterface:
+    """The generated ``<primal>__enzyme_autodiff`` interface.
+
+    For the value.f90 primal it represents this output:
+
+        subroutine normalise_value__enzyme_autodiff(sr, n, x, dx, y, dy) ! name
+          interface
+            subroutine sr_value_decal(n, xx, yy)   ! callback_interface
+              ...
+            end subroutine
+          end interface
+          procedure(sr_value_decal) :: sr          ! callback_name ("sr")
+          integer, value, intent(in) :: n          ! args: one InterfaceArg
+          real, dimension(n), intent(in) :: x      !   per declaration line
+          real, dimension(n), intent(out) :: dx    !   (primal copies, shadows,
+          real, dimension(n), intent(out) :: y     !   and descriptors)
+          real, dimension(n), intent(inout) :: dy
+        end subroutine
+
+    ``kind`` is ``"subroutine"`` (reverse mode). ``needs_iso_c_binding`` adds
+    ``use iso_c_binding, only: c_int`` when descriptors are present (none here).
+    """
+
+    name: str
+    kind: ProcedureKind
+    callback_name: str
+    callback_interface: CallbackInterface
+    args: tuple[InterfaceArg, ...]
+    needs_iso_c_binding: bool
+
+
 def get_intent(sym: Symbol) -> Intent:
     """Map a symbol's argument access onto an ``Intent`` string.
 
