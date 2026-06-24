@@ -49,6 +49,7 @@ ShapeKind = Literal[
 Intent = Literal["in", "out", "inout", "unknown"]
 ProcedureKind = Literal["subroutine", "function"]
 ArgKind = Literal["data", "procedure"]
+InterfaceArgRole = Literal["primal", "shadow", "descriptor"]
 
 # The five intrinsic *type classes* (BaseType) are real, complex, integer,
 # logical, character. "double precision" is the real
@@ -136,6 +137,23 @@ class ProcedureSignature:
     pure: bool
     module: str | None
     uses: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class InterfaceArg:
+    """One dummy-argument declaration in a generated interface, such as
+    ``real, dimension(n), intent(out) :: dx``.
+
+    Holds the declaration pieces for emit to assemble. ``role`` marks it as a
+    primal copy, a shadow, or an activity descriptor.
+    """
+
+    role: InterfaceArgRole
+    name: str
+    type_spec: str  # e.g. "real", "integer(c_int)"
+    shape: str | None  # e.g. "dimension(n)", or None for a scalar
+    intent: Intent
+    attributes: frozenset[str]
 
 
 def get_intent(sym: Symbol) -> Intent:
