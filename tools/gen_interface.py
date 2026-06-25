@@ -490,6 +490,14 @@ def callback_interface_name(primal_name, primal_kind):
     return f"{callback_name(primal_kind)}_{primal_name}"
 
 
+def shadow_name(arg_name):
+    """Return the reverse-mode shadow (derivative) argument name: ``d<name>``.
+
+    ``x`` becomes ``dx`` and ``y`` becomes ``dy``.
+    """
+    return f"d{arg_name}"
+
+
 def reverse_mode_shadow_intent(
     procedure_kind: ProcedureKind, primal_intent: Intent
 ) -> Intent:
