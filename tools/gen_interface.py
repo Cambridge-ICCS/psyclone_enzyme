@@ -473,6 +473,14 @@ def hook_name(primal_name):
     return f"{primal_name}__enzyme_autodiff"
 
 
+def callback_name(primal_kind):
+    """Return prefix based on primal's type.
+
+    ``"sr"`` for a subroutine primal, ``"fn"`` for a function.
+    """
+    return "fn" if primal_kind == "function" else "sr"
+
+
 def reverse_mode_shadow_intent(
     procedure_kind: ProcedureKind, primal_intent: Intent
 ) -> Intent:
