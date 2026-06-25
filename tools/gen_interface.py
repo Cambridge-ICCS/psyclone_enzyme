@@ -481,6 +481,15 @@ def callback_name(primal_kind):
     return "fn" if primal_kind == "function" else "sr"
 
 
+def callback_interface_name(primal_name, primal_kind):
+    """Return the nested callback-interface name as ``{sr|fn}_<primal_name>``.
+
+    ``normalise_value`` (subroutine) gives ``sr_normalise_value`` and
+    ``square`` (function) gives ``fn_square``.
+    """
+    return f"{callback_name(primal_kind)}_{primal_name}"
+
+
 def reverse_mode_shadow_intent(
     procedure_kind: ProcedureKind, primal_intent: Intent
 ) -> Intent:
