@@ -465,6 +465,14 @@ def extract_signature(routine: Routine) -> ProcedureSignature:
 # ---------------------------------------------------------------------------
 
 
+def hook_name(primal_name):
+    """Return the Enzyme reverse-mode hook name for a primal routine.
+
+    ``normalise_value`` becomes ``normalise_value__enzyme_autodiff``.
+    """
+    return f"{primal_name}__enzyme_autodiff"
+
+
 def reverse_mode_shadow_intent(
     procedure_kind: ProcedureKind, primal_intent: Intent
 ) -> Intent:
