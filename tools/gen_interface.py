@@ -574,6 +574,24 @@ def primal_interface_arg(dummy):
     )
 
 
+def shadow_interface_arg(dummy, procedure_kind):
+    """Build the shadow (derivative) :class:`InterfaceArg` for an active primal arg.
+
+    Mirrors the primal's type and shape but renames it (``x`` to ``dx`` via
+    :func:`shadow_name`), remaps the intent for reverse mode (via
+    :func:`reverse_mode_shadow_intent`). It does not create a shadow for pass-by-value
+    arguments.
+    """
+    return InterfaceArg(
+        role="shadow",
+        name=shadow_name(dummy.name),
+        type_spec=dummy.type_spec_raw,
+        shape=dummy.shape_raw,
+        intent=reverse_mode_shadow_intent(procedure_kind, dummy.intent),
+        attributes=dummy.attributes - {"value"},
+    )
+
+
 def _format_dummy(arg: DummyArg) -> str:
     """Render one extracted :class:`DummyArg` as an indented block.
 
