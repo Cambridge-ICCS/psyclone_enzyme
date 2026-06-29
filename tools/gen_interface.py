@@ -332,6 +332,16 @@ def _base_type_from_prefix(prefix: str) -> BaseType:
     return "unknown"
 
 
+def _type_spec_raw_from_prefix(prefix):
+    """Return the leading type token of a declaration prefix, lowercased.
+
+    This type token is kept whole so a kind or length selector stays attached 
+    e.g. (``real(kind=8)``, ``character(len=*)``) remains intact.
+
+    """
+    return _split_top_level_commas(prefix)[0].strip().lower()
+
+
 def _intent_from_prefix(prefix: str) -> Intent:
     """Recover an ``Intent`` from an ``intent(...)`` token in the prefix.
 
@@ -423,6 +433,7 @@ def _dummy_from_symbol(sym: Symbol) -> DummyArg:
     details) stay at their defaults until their extractors are added.
     """
     _, raw_decl = unwrap_unsupported(sym.datatype)
+    prefix = _writer_prefix(sym, writer)
     base_type = get_base_type(sym)
     rank, shape_kind = _rank_and_shape(sym)
     # Attributes that matter (value, pointer, target, optional, contiguous)
@@ -436,7 +447,7 @@ def _dummy_from_symbol(sym: Symbol) -> DummyArg:
         name=sym.name,
         arg_kind="data",  # TODO: detect procedure dummies
         base_type=base_type,
-        type_spec_raw=None,  # TODO: gen_vardecl prefix (needed for emit)
+        type_spec_raw=_type_spec_raw_from_prefix(prefix),
         kind=None,  # TODO
         char_len=None,  # TODO
         derived_type_name=None,  # TODO
@@ -446,7 +457,7 @@ def _dummy_from_symbol(sym: Symbol) -> DummyArg:
         is_assumed_type=False,
         rank=rank,
         shape_kind=shape_kind,
-        shape_raw=None,
+        shape_raw=_shape_raw_from_prefix(prefix),
         is_coarray=False,
         corank=None,
         coshape_raw=None,
@@ -465,11 +476,14 @@ def extract_signature(routine: Routine) -> ProcedureSignature:
     procedure kind (``function`` when the routine has a result symbol,
     otherwise ``subroutine``).
     """
+    writer = FortranWriter()
     return_symbol = getattr(routine, "return_symbol", None)
     kind = "function" if return_symbol is not None else "subroutine"
-    args = tuple(_dummy_from_symbol(sym) for sym in routine.symbol_table.argument_list)
+    args = tuple(
+        _dummy_from_symbol(sym, writer) for sym in routine.symbol_table.argument_list
+    )
     return_arg = (
-        _dummy_from_symbol(return_symbol) if return_symbol is not None else None
+        _dummy_from_symbol(return_symbol, writer) if return_symbol is not None else None
     )
     return ProcedureSignature(
         name=routine.name,
