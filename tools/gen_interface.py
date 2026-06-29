@@ -358,6 +358,21 @@ def _attributes_from_prefix(prefix: str) -> frozenset[str]:
     return frozenset(tokens & ATTRIBUTE_KEYWORDS)
 
 
+def _shape_raw_from_prefix(prefix):
+    """Return the ``dimension(...)`` token from a declaration prefix, or ``None``.
+
+    The token is returned with its original case and spacing preserved (emit
+    reuses it verbatim). The comma split is parenthesis-aware, so a multi-rank
+    ``dimension(n,3)`` stays intact. A scalar prefix has no such token and
+    yields ``None``.
+    """
+    for token in _split_top_level_commas(prefix):
+        token = token.strip()
+        if token.lower().startswith("dimension"):
+            return token
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Extraction: PSyIR symbols -> model
 # ---------------------------------------------------------------------------
