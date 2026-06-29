@@ -378,6 +378,15 @@ def _shape_raw_from_prefix(prefix):
 # ---------------------------------------------------------------------------
 
 
+def _writer_prefix(sym, writer):
+    """Render ``sym``'s declaration and return its prefix (text before ``::``).
+
+    ``writer.gen_vardecl`` reconstructs a declaration for any symbol, e.g
+    (``real, dimension(n), intent(in) :: x``)
+    """
+    return _decl_prefix(writer.gen_vardecl(sym))
+
+
 def _rank_and_shape(sym: Symbol) -> tuple[int | None, ShapeKind | None]:
     """Return ``(rank, shape_kind)`` for a symbol.
 
