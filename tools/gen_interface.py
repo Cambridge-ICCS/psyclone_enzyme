@@ -556,6 +556,24 @@ def reverse_mode_shadow_intent(
     }[primal_intent]
 
 
+def primal_interface_arg(dummy):
+    """Build the `InterfaceArg`, mapped from the primals `DummyArg`.
+
+    The hook re-declares each primal argument unchanged (same type, shape,
+    intent and attributes such as ``value``), so the call matches the primal 
+    ABI exactly. The raw text fields populated during extraction map straight 
+    into the `InterfaceArg.
+    """
+    return InterfaceArg(
+        role="primal",
+        name=dummy.name,
+        type_spec=dummy.type_spec_raw,
+        shape=dummy.shape_raw,
+        intent=dummy.intent,
+        attributes=dummy.attributes,
+    )
+
+
 def _format_dummy(arg: DummyArg) -> str:
     """Render one extracted :class:`DummyArg` as an indented block.
 
