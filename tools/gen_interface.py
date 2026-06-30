@@ -623,6 +623,27 @@ def expand_primal_arg(dummy, procedure_kind):
     return tuple(args)
 
 
+def build_autodiff_interface(signature):
+    """Build the reverse-mode :class:`AutodiffInterface` for a primal.
+
+    The interface body is every primal arg expanded inorder (primal copy, plus 
+    a shadow for active args), and it carries the nested callback interface.
+    """
+    body = tuple(
+        arg
+        for dummy in signature.args
+        for arg in expand_primal_arg(dummy, signature.kind)
+    )
+    return AutodiffInterface(
+        name=hook_name(signature.name),
+        kind="subroutine",
+        callback_name=callback_name(signature.kind),
+        callback_interface=build_callback_interface(signature),
+        args=body,
+        needs_iso_c_binding=False,
+    )
+
+
 def _format_dummy(arg: DummyArg) -> str:
     """Render one extracted :class:`DummyArg` as an indented block.
 
