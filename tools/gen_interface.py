@@ -610,6 +610,19 @@ def build_callback_interface(signature):
     )
 
 
+def expand_primal_arg(dummy, procedure_kind):
+    """Expand one primal arg into primal arg and shadow arg.
+
+    Every arg contributes its primal copy; an active arg additionally
+    contributes a shadow immediately after it (``x`` to ``x, dx``). Inactive
+    args (such as the ``value`` size ``n``) contribute only the primal copy.
+    """
+    args = [primal_interface_arg(dummy)]
+    if dummy.is_active:
+        args.append(shadow_interface_arg(dummy, procedure_kind))
+    return tuple(args)
+
+
 def _format_dummy(arg: DummyArg) -> str:
     """Render one extracted :class:`DummyArg` as an indented block.
 
