@@ -592,6 +592,24 @@ def shadow_interface_arg(dummy, procedure_kind):
     )
 
 
+def build_callback_interface(signature):
+    """Build the :class:`CallbackInterface` mirroring the primal signature.
+
+    The nested callback interface re-declares the primal exactly.
+    """
+    args = tuple(primal_interface_arg(arg) for arg in signature.args)
+    result_type = (
+        # if there's a return arg, use its type string; otherwise None.
+        signature.return_arg.type_spec_raw if signature.return_arg else None
+    )
+    return CallbackInterface(
+        name=callback_interface_name(signature.name, signature.kind),
+        kind=signature.kind,
+        args=args,
+        result_type=result_type,
+    )
+
+
 def _format_dummy(arg: DummyArg) -> str:
     """Render one extracted :class:`DummyArg` as an indented block.
 
