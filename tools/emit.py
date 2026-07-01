@@ -69,7 +69,7 @@ def emit(autodiff):
     """
     # the nested callback block, used both to render the interface and to name
     # the procedure declaration below.
-    cb = autodiff.callback_interface
+    callback_interface = autodiff.callback_interface
     body_indent = 2 * INDENT
     # hook argument list: the callback dummy first, then every body arg
     # (e.g. "sr, n, x, dx, y, dy").
@@ -84,9 +84,15 @@ def emit(autodiff):
     if autodiff.needs_iso_c_binding:
         lines.append(body_indent + "use iso_c_binding, only: c_int")
 
-    lines.extend(body_indent + line for line in render_callback_interface(cb))
+    lines.extend(
+        body_indent + line
+        for line in render_callback_interface(callback_interface)
+    )
     # bind the callback dummy to its interface: "procedure(<iface>) :: <dummy>".
-    lines.append(body_indent + f"procedure({cb.name}) :: {autodiff.callback_name}")
+    lines.append(
+        body_indent
+        + f"procedure({callback_interface.name}) :: {autodiff.callback_name}"
+    )
     # one declaration line per body arg (primal copies interleaved with shadows).
     for arg in autodiff.args:
         lines.append(body_indent + render_declaration(arg))
