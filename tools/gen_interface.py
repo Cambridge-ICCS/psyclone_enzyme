@@ -23,6 +23,11 @@ from psyclone.psyir.symbols.datatypes import (
     UnsupportedFortranType,
 )
 
+# Put the repo root on the path so ``from tools.emit`` resolves
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from tools.emit import emit
+
 Access = ArgumentInterface.Access
 
 BaseType = Literal[
@@ -687,3 +692,7 @@ if __name__ == "__main__":
     if sig.return_arg is not None:
         print("  returns:")
         print(_format_dummy(sig.return_arg))
+
+    # run the rest of the pipeline (rules, then emit) and print the block.
+    print()
+    print("\n".join(emit(build_autodiff_interface(sig))))
