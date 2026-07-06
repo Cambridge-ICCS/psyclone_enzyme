@@ -7,8 +7,8 @@ argument signatures, and provides utilities for synthesising the derivative inte
 that Enzyme requires.
 """
 
-from dataclasses import dataclass
-from typing import Literal
+import sys
+from pathlib import Path
 
 from psyclone.psyir.frontend.fortran import FortranReader
 from psyclone.psyir.nodes import Routine
@@ -27,105 +27,10 @@ from psyclone.psyir.symbols.datatypes import (
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from tools.emit import emit
-from tools.model import DummyArg, Intent, ProcedureKind, ProcedureSignature
+from tools.interface_model import AutodiffInterface, CallbackInterface, InterfaceArg
+from tools.model import DummyArg, ProcedureSignature
 
 Access = ArgumentInterface.Access
-
-InterfaceArgRole = Literal["primal", "shadow", "descriptor"]
-
-# The five intrinsic *type classes* (BaseType) are real, complex, integer,
-# logical, character. "double precision" is the real
-# type with a double-precision kind, so it maps to "real" below.
-INTRINSIC_TYPES = (
-    "double precision",
-    "real",
-    "complex",
-    "integer",
-    "logical",
-    "character",
-)
-
-# Attribute keywords a data dummy argument may carry.
-# intent(...), dimension(...) and codimension[...] have dedicated fields
-# (intent, rank/shape_kind, coarray) so are excluded. bind(c) is excluded because a data
-# dummy argument cannot carry it (a BIND(C) variable must be a module variable or common
-# block).
-ATTRIBUTE_KEYWORDS = frozenset(
-    {
-        "value",
-        "optional",
-        "pointer",
-        "allocatable",
-        "target",
-        "contiguous",
-        "asynchronous",
-        "volatile",
-    }
-)
-
-
-@dataclass(frozen=True)
-class InterfaceArg:
-    """One dummy-argument declaration in a generated interface, such as
-    ``real, dimension(n), intent(out) :: dx``.
-
-    Holds the declaration pieces for emit to assemble. ``role`` marks it as a
-    primal copy, a shadow, or an activity descriptor.
-    """
-
-    role: InterfaceArgRole
-    name: str
-    type_spec: str  # e.g. "real", "integer(c_int)"
-    shape: str | None  # e.g. "dimension(n)", or None for a scalar
-    intent: Intent
-    attributes: frozenset[str]
-
-
-@dataclass(frozen=True)
-class CallbackInterface:
-    """The nested interface describing the callback procedure's signature.
-
-    Mirrors the primal routine. ``result_type`` is the function result type
-    (e.g. ``"real"``) for a function primal, or ``None`` for a subroutine.
-    """
-
-    name: str
-    kind: ProcedureKind
-    args: tuple[InterfaceArg, ...]
-    result_type: str | None
-
-
-@dataclass(frozen=True)
-class AutodiffInterface:
-    """The generated ``<primal>__enzyme_autodiff`` interface.
-
-    For the value.f90 primal it represents this output:
-
-        subroutine normalise_value__enzyme_autodiff(sr, n, x, dx, y, dy) ! name
-          interface
-            subroutine sr_value_decal(n, xx, yy)   ! callback_interface
-              ...
-            end subroutine
-          end interface
-          procedure(sr_value_decal) :: sr          ! callback_name ("sr")
-          integer, value, intent(in) :: n          ! args: one InterfaceArg
-          real, dimension(n), intent(in) :: x      !   per declaration line
-          real, dimension(n), intent(out) :: dx    !   (primal copies, shadows,
-          real, dimension(n), intent(out) :: y     !   and descriptors)
-          real, dimension(n), intent(inout) :: dy
-        end subroutine
-
-    ``kind`` is ``"subroutine"`` (reverse mode). ``needs_iso_c_binding`` adds
-    ``use iso_c_binding, only: c_int`` when descriptors are present (none here).
-    """
-
-    name: str
-    kind: ProcedureKind
-    callback_name: str
-    callback_interface: CallbackInterface
-    args: tuple[InterfaceArg, ...]
-    needs_iso_c_binding: bool
-
 
 def get_intent(sym: Symbol) -> Intent:
     """Map a symbol's argument access onto an ``Intent`` string.
