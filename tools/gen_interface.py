@@ -7,6 +7,7 @@ argument signatures, and provides utilities for synthesising the derivative inte
 that Enzyme requires.
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -44,16 +45,24 @@ def _format_dummy(arg: DummyArg) -> str:
 
 
 if __name__ == "__main__":
-    test_code = """
-    subroutine normalise_value(n, x, y)
-    integer, value, intent(in) :: n
-    real, dimension(n), intent(in) :: x
-    real, dimension(n), intent(out) :: y
-    y(:) = x / sum(x)
-    end subroutine normalise_value
-    """
+    parser = argparse.ArgumentParser(
+        description="Generate the Enzyme autodiff interface for a primal routine."
+    )
+    parser.add_argument(
+        "source", type=Path, help="Fortran source file with the primal routine"
+    )
+    args = parser.parse_args()
+
+    try:
+        source = args.source.read_text()
+    except OSError as exc:
+        parser.error(str(exc))
+
     reader = FortranReader()
-    psyir = reader.psyir_from_source(test_code)
+    psyir = reader.psyir_from_source(source)
+    # TODO: the CLI is bare minimum. Still to do next: take a routine-name argument
+    # (walk(Routine)[0] only picks the primal when it is first in the file), and
+    # print just the emitted interface instead of the _format_dummy model dump.
     routine = psyir.walk(Routine)[0]
     sig = extract_signature(routine)
 
