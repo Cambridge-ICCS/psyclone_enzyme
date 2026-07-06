@@ -1,0 +1,4 @@
+# Python dependencies for the Enzyme interface generator (tools/).
+
+PSyclone==3.2.2
+fparser==0.2.1
