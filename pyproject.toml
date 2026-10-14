@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools"]
+
+[project]
+name = "psyclone_enzyme"
+version = "0.1.0"
+authors = [
+  {name = "Joe Wallwork"},
+]
+maintainers = [
+  {name = "Joe Wallwork"},
+]
+description = "Python utilities supporting using PSyclone and Enzyme."
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = [
+  "psyclone",
+  "enzyme",
+  "python",
+]
+dependencies = ["psyclone"]
+
+[project.urls]
+Repository = "https://github.com/Cambridge-ICCS/psyclone_enzyme"
+
+[tool.setuptools]
+packages = ["psyclone_enzyme"]
