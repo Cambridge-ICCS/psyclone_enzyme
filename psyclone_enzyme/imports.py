@@ -29,8 +29,12 @@ def _get_or_import_routine(table, routine):
     try:
         enzyme_mod = table.lookup("enzyme")
         if not isinstance(enzyme_mod, ContainerSymbol):
-            return None  # Something else named 'enzyme' is in scope.
+            raise ImportError(
+                f"Cannot bring {routine} into scope. Is something else named 'enzyme'"
+                " in scope?"
+            )
     except KeyError:
         enzyme_mod = table.new_symbol("enzyme", symbol_type=ContainerSymbol)
-    return table.new_symbol(routine, symbol_type=RoutineSymbol,
-                            interface=ImportInterface(enzyme_mod))
+    return table.new_symbol(
+        routine, symbol_type=RoutineSymbol, interface=ImportInterface(enzyme_mod)
+)
