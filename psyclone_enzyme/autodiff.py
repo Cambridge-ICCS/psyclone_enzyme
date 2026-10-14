@@ -17,6 +17,8 @@ from psyclone.psyir.nodes import Assignment, Call, Literal, Reference, Routine
 from psyclone.psyir.symbols import (ArgumentInterface, ContainerSymbol,
                                     DataSymbol, ImportInterface, RoutineSymbol)
 
+from psyclone_enzyme.imports import _get_or_import_routine
+
 __all__ = ["add_enzyme_autodiff"]
 
 
@@ -84,7 +86,7 @@ def _transform_function_call(routine, assign, call):
     :type call: :py:class:`psyclone.psyir.nodes.Call`
     """
     table = routine.symbol_table
-    autodiff = _get_or_import_autodiff(table)
+    autodiff = _get_or_import_routine(table, "enzyme_autodiff")
     if autodiff is None:
         return  # Cannot bring enzyme_autodiff into scope - skip.
 
@@ -137,7 +139,7 @@ def _transform_subroutine_call(routine, call):
     :type call: :py:class:`psyclone.psyir.nodes.Call`
     """
     table = routine.symbol_table
-    autodiff = _get_or_import_autodiff(table)
+    autodiff = _get_or_import_routine(table, "enzyme_autodiff")
     if autodiff is None:
         return  # Cannot bring enzyme_autodiff into scope - skip.
 
@@ -199,31 +201,3 @@ def _get_call_arg_intents(call):
     except Exception:
         # Conservative fallback: treat every argument as intent(inout).
         return [ArgumentInterface.Access.READWRITE] * len(call.arguments)
-
-
-def _get_or_import_autodiff(table):
-    """Return a RoutineSymbol for `enzyme_autodiff` in the given symbol table.
-
-    Looks up the `enzyme_autodiff` symbol and specialises it to a
-    :py:class:`psyclone.psyir.symbols.RoutineSymbol`. If the symbol is not
-    already in scope, it is created with an import from the ``enzyme``
-    module, resulting in a ``use enzyme, only: enzyme_autodiff`` statement
-    being generated in the output code.
-
-    :param table: the symbol table to look up/extend.
-    :type table: :py:class:`psyclone.psyir.symbols.SymbolTable`
-    """
-    try:
-        autodiff = table.lookup("enzyme_autodiff")
-        autodiff.specialise(RoutineSymbol)
-        return autodiff
-    except (KeyError, TypeError):
-        pass  # Fall through and import the symbol from the enzyme module.
-    try:
-        enzyme_mod = table.lookup("enzyme")
-        if not isinstance(enzyme_mod, ContainerSymbol):
-            return None  # Something else named 'enzyme' is in scope.
-    except KeyError:
-        enzyme_mod = table.new_symbol("enzyme", symbol_type=ContainerSymbol)
-    return table.new_symbol("enzyme_autodiff", symbol_type=RoutineSymbol,
-                            interface=ImportInterface(enzyme_mod))
