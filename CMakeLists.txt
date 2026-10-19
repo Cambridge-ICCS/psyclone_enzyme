@@ -6,9 +6,8 @@
 # infrastructure used by Enzyme itself.
 
 cmake_minimum_required(VERSION 3.20)
-project(psyclone_enzyme LANGUAGES C Fortran) # NOTE: C needed for
-                                             # LLVMConfig.cmake's internal
-                                             # checks
+# NOTE: C needed for LLVMConfig.cmake's internal checks
+project(psyclone_enzyme LANGUAGES C Fortran)
 
 # Locate the same LLVM installation that Enzyme was built against. Required
 # so that we can find LLVM's CMake helpers (e.g. ``configure_lit_site_cfg``,
