@@ -26,7 +26,7 @@ program main
 
   x = 3
   call square(x, y)
-
+  print *, y
   print *, dx
 
 end program main

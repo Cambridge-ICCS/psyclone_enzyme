@@ -25,7 +25,7 @@ program main
 
   x = 3
   y = square(x)
-
+  print *, y
   print *, dx
 
 end program main
