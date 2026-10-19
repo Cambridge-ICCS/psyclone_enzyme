@@ -1,0 +1,37 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Site-specific configuration for the PSyclone-Enzyme lit testsuite.
+#
+# This file is configured by CMake from ``lit.site.cfg.py.in``; it exposes
+# the CMake-detected paths (LLVM tools, Enzyme plugins, Fortran compiler) to
+# lit, then loads the generic ``lit.cfg.py`` to do the rest of the setup.
+#
+# Portions adapted from enzyme/test/lit.site.cfg.py.in in the Enzyme project
+# (https://github.com/EnzymeAD/Enzyme), which is licensed under the Apache
+# License v2.0 with LLVM Exceptions.
+
+import os
+
+config.llvm_ver = "@PSYCLONE_ENZYME_LLVM_VERSION_MAJOR@"
+config.llvm_obj_root = "@LLVM_BINARY_DIR@"
+config.llvm_tools_dir = "@PSYCLONE_ENZYME_LLVM_TOOLS_DIR@"
+config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
+config.llvm_shlib_ext = "@PSYCLONE_ENZYME_LLVM_SHLIBEXT@"
+
+# Enzyme build tree must contain ``Enzyme/LLVMEnzyme-<ver>.so``,
+# ``Enzyme/FlangEnzyme-<ver>.so`` (and the corresponding
+# ``FlangEnzyme-<ver>.cfg``) and ``modules/``.
+config.enzyme_obj_root = "@PSYCLONE_ENZYME_ENZYME_BINARY_DIR@"
+config.target_triple = "@TARGET_TRIPLE@"
+
+# Root under which lit executes tests. Substitutions such as ``%t`` are
+# anchored relative to this directory.
+config.psyclone_enzyme_test_root = os.path.dirname(os.path.abspath(__file__))
+
+# The Fortran compiler
+config.fc = "@PSYCLONE_ENZYME_Fortran_COMPILER@"
+
+# Let the main config do the real work. Note the path here is resolved by
+# CMake to point into the source tree (where lit.cfg.py lives), not the
+# build tree (where this file is installed).
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

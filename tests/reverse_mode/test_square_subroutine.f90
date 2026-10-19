@@ -5,6 +5,8 @@
 ! RUN: %fc -flto -O3 -c %loadFortran %s -o /dev/stdout | %opt %loadEnzyme %enzyme -o %t.ll && %fc -flto -O3 %t.ll -o %t1 && %t1 | FileCheck %s
 ! RUN: %if flangenzyme %{ %fc -O0 %loadFortran %loadFlangEnzyme %s -o %t2 && %t2 | FileCheck %s %}
 ! RUN: %if flangenzyme %{ %fc -O2 %loadFortran %loadFlangEnzyme %s -o %t2 && %t2 | FileCheck %s %}
+! CHECK: 9
+! CHECK-NEXT: 6
 
 module math
   implicit none
@@ -30,6 +32,3 @@ program main
   print *, dx
 
 end program main
-
-! CHECK: 9
-! CHECK-NEXT: 6
