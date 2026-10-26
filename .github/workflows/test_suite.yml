@@ -90,9 +90,8 @@ jobs:
           -DCMAKE_Fortran_COMPILER="${{ matrix.compiler }}-${{ matrix.llvm }}" \
           -DEnzyme_BINARY_DIR="../enzyme/build"
         # Download default PSyclone config file
-        mkdir -p tests/.psyclose
-        cd tests/.psyclone/
-        curl -O https://raw.githubusercontent.com/stfc/PSyclone/refs/heads/master/config/psyclone.cfg
-        cd -
+        mkdir -p tests/.psyclone
+        curl -o tests/.psyclone/psyclone.cfg \
+          https://raw.githubusercontent.com/stfc/PSyclone/refs/heads/master/config/psyclone.cfg
         # Run tests
         ninja check-psyclone-enzyme
