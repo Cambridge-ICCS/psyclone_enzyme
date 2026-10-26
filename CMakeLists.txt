@@ -22,15 +22,9 @@ include(AddLLVM)
 # LLVM/flang plugins and the Fortran enzyme module directory. Either point
 # this at the build directory directly (the directory containing
 # ``Enzyme/LLVMEnzyme-<ver>.so`` etc.) or at a standard Enzyme install prefix.
-set(Enzyme_BINARY_DIR ""
-    CACHE
-      PATH
-      "Path to the Enzyme build directory (e.g. fortran_enzyme/enzyme/build/flang)")
+set(Enzyme_BINARY_DIR "" CACHE PATH "Path to the Enzyme build directory")
 if(NOT Enzyme_BINARY_DIR)
-  message(
-    FATAL_ERROR
-      "Enzyme_BINARY_DIR must be set to the Enzyme build directory, "
-      "e.g. -DEnzyme_BINARY_DIR=/path/to/fortran_enzyme/enzyme/build/flang")
+  message(FATAL_ERROR "Enzyme_BINARY_DIR must be set to the Enzyme build directory")
 endif()
 
 # Locate the ``psyclone`` driver used to pre-process each Fortran test.
