@@ -84,12 +84,15 @@ jobs:
       run: |
         mkdir -p build_tests
         cd build_tests
-        # Download default PSyclone config file
-        curl -O https://raw.githubusercontent.com/stfc/PSyclone/refs/heads/master/config/psyclone.cfg
         # Built tests
         cmake .. -GNinja -DCMAKE_BUILD_TYPE="${{ matrix.build }}" \
           -DLLVM_DIR="/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm" \
           -DCMAKE_Fortran_COMPILER="${{ matrix.compiler }}-${{ matrix.llvm }}" \
           -DEnzyme_BINARY_DIR="../enzyme/build"
+        # Download default PSyclone config file
+        mkdir -p tests/.psyclose
+        cd tests/.psyclone/
+        curl -O https://raw.githubusercontent.com/stfc/PSyclone/refs/heads/master/config/psyclone.cfg
+        cd -
         # Run tests
         ninja check-psyclone-enzyme
