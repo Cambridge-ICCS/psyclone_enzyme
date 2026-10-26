@@ -25,36 +25,57 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py)
 
-# PSyclone-transformation script used for every test in reverse_mode/.
-set(REVERSE_MODE_TRANS_SCRIPT
-    ${CMAKE_CURRENT_SOURCE_DIR}/reverse_mode/trans_square.py)
-
-# Find PSyclone inputs and declare rules to produce their processed forms.
-set(PSYCLONE_TEST_DIR reverse_mode)
-file(GLOB PSYCLONE_TEST_SOURCES CONFIGURE_DEPENDS
-     "${CMAKE_CURRENT_SOURCE_DIR}/${PSYCLONE_TEST_DIR}/*.f90")
-
+# Process test files with PSyclone
 set(PSYCLONE_PROCESSED_SOURCES)
-foreach(src IN LISTS PSYCLONE_TEST_SOURCES)
-  get_filename_component(fname "${src}" NAME)
-  set(out "${CMAKE_CURRENT_BINARY_DIR}/${PSYCLONE_TEST_DIR}/processed/${fname}")
-  add_custom_command(
-    OUTPUT "${out}"
-    COMMAND
-      ${CMAKE_COMMAND} -E make_directory
-      "${CMAKE_CURRENT_BINARY_DIR}/${PSYCLONE_TEST_DIR}/processed"
-    COMMAND
-      # fmt: off
-      ${PSYCLONE_EXECUTABLE}
-        --keep-comments
-        -s "${REVERSE_MODE_TRANS_SCRIPT}"
-        -o "${out}"
-        "${src}"
-      # fmt: on
-    DEPENDS "${src}" "${REVERSE_MODE_TRANS_SCRIPT}"
-    COMMENT "PSyclone: ${PSYCLONE_TEST_DIR}/${fname}"
-    VERBATIM)
-  list(APPEND PSYCLONE_PROCESSED_SOURCES "${out}")
+
+# Test directories, one per differentiation mode handled by
+# psyclone_enzyme. Each holds its own trans_<keyword>.py scripts and
+# test_<keyword>_*.f90 inputs.
+set(PSYCLONE_TEST_DIRS reverse_mode forward_mode)
+
+# Test keywords: for each keyword <kw>, every mode directory listed in
+# PSYCLONE_TEST_DIRS provides a transformation script trans_<kw>.py and
+# one or more inputs test_<kw>_*.f90.
+set(TEST_KEYWORDS square)
+
+# For every test_<keyword>_*.f90 file in <mode_dir>, declare a rule that
+# runs PSyclone with <mode_dir>/trans_<keyword>.py to produce the
+# processed file under ${CMAKE_CURRENT_BINARY_DIR}/<mode_dir>/processed/,
+# and append it to PSYCLONE_PROCESSED_SOURCES. A macro rather than a
+# function so that the APPEND updates the parent-scope list in place.
+macro(psyclone_enrol_tests mode_dir keyword)
+  set(TRANS_SCRIPT
+      "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/trans_${keyword}.py")
+  file(GLOB PSYCLONE_TEST_SOURCES CONFIGURE_DEPENDS
+       "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/test_${keyword}_*.f90")
+
+  foreach(src IN LISTS PSYCLONE_TEST_SOURCES)
+    get_filename_component(fname "${src}" NAME)
+    set(out "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${fname}")
+    add_custom_command(
+      OUTPUT "${out}"
+      COMMAND
+        ${CMAKE_COMMAND} -E make_directory
+        "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed"
+      COMMAND
+        # fmt: off
+        ${PSYCLONE_EXECUTABLE}
+          --keep-comments
+          -s "${TRANS_SCRIPT}"
+          -o "${out}"
+          "${src}"
+        # fmt: on
+      DEPENDS "${src}" "${TRANS_SCRIPT}"
+      COMMENT "PSyclone: ${mode_dir}/${fname}"
+      VERBATIM)
+    list(APPEND PSYCLONE_PROCESSED_SOURCES "${out}")
+  endforeach()
+endmacro()
+
+foreach(mode_dir IN LISTS PSYCLONE_TEST_DIRS)
+  foreach(keyword IN LISTS TEST_KEYWORDS)
+    psyclone_enrol_tests(${mode_dir} ${keyword})
+  endforeach()
 endforeach()
 
 # Build target that produces all the processed Fortran files. The lit target
