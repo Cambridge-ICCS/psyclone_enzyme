@@ -5,7 +5,7 @@ on:
     branches: 
     - main
     paths: &paths
-      - '.github/workflows/fortran.yml'
+      - '.github/workflows/flang.yml'
       - 'psyclone_enzyme/**'
       - 'pyproject.toml'
       - '**/CMakeLists.txt'
