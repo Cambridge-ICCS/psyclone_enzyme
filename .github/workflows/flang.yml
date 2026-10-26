@@ -57,6 +57,10 @@ jobs:
       with:
         persist-credentials: false
 
+    - name: Install psyclone_enzyme
+      run: |
+        sudo python3 -m pip install .
+
     - name: Install Enzyme
       run: |
         git clone https://github.com/EnzymeAD/enzyme.git
