@@ -77,8 +77,8 @@ jobs:
           -DENZYME_FORTRAN=ON \
           -DENZYME_FLANG=ON \
           -DCMAKE_Fortran_COMPILER="${{ matrix.compiler }}-${{ matrix.llvm }}"
-        # Build Enzyme's LLVM and Flang plugins
-        ninja "LLVMEnzyme-${{ matrix.llvm }}" "FlangEnzyme-${{ matrix.llvm }}"
+        # Build Enzyme's LLVM and Flang plugins plus the Fortran bindings module
+        ninja "LLVMEnzyme-${{ matrix.llvm }}" "FlangEnzyme-${{ matrix.llvm }}" EnzymeFortran
 
     - name: Build and run psyclone_enzyme tests
       run: |
