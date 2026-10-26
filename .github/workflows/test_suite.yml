@@ -77,8 +77,8 @@ jobs:
 
     - name: Build and run psyclone_enzyme tests
       run: |
-        mkdir -p build
-        cd build
+        mkdir -p build_tests
+        cd build_tests
         cmake .. -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
           -DLLVM_DIR=/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm \
           -DCMAKE_Fortran_COMPILER=${{ matrix.compiler }}-${{ matrix.llvm }} \
