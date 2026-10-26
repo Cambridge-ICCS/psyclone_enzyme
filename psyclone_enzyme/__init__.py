@@ -1,1 +1,1 @@
-from psyclone_enzyme.autodiff import add_enzyme_autodiff
+from psyclone_enzyme.function_hooks import add_enzyme_function_hook

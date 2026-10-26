@@ -1,7 +1,7 @@
-"""Module containing the Enzyme autodiff PSyIR transformation logic.
+"""Module containing the Enzyme function hook PSyIR transformation logic.
 
-Provides functions to insert an ``enzyme_autodiff`` call after the first call to a
-target procedure in a given routine.  Both the function form
+Provides functions to insert a function hook call after the first call to a target
+procedure in a given routine.  Both the function form
 
     <y> = <f>(<x1>, <x2>, ...)
 
@@ -24,14 +24,14 @@ from psyclone.psyir.symbols import (
 from psyclone_enzyme.imports import _get_or_import_routine
 from psyclone_enzyme.intents import _get_call_arg_intents
 
-__all__ = ["add_enzyme_autodiff"]
+__all__ = ["add_enzyme_function_hook"]
 
 
-def add_enzyme_autodiff(psyir, target_name):
-    """Insert an ``enzyme_autodiff`` call after the first call to the target procedure
-    in each routine in the PSyIR tree.
+def add_enzyme_function_hook(psyir, target_name, reverse=True):
+    """Insert a function hook call after the first call to the target procedure in each
+    routine in the PSyIR tree.
 
-    If the `enzyme_autodiff` symbol is not already in scope (e.g. via a ``use enzyme``
+    If the function hook symbol is not already in scope (e.g. via a ``use enzyme``
     statement), an import from the ``enzyme`` module is added to the routine's symbol
     table so that a ``use enzyme`` statement is generated in the output code.
 
@@ -51,6 +51,8 @@ def add_enzyme_autodiff(psyir, target_name):
     :type psyir: :py:class:`psyclone.psyir.nodes.FileContainer`
     :param target_name: name of the procedure to differentiate.
     :type target_name: str
+    :param reverse: use `enzyme_autodiff` hook if True else `enzyme_fwddiff`
+    :type reverse: bool
     """
     for routine in psyir.walk(Routine):
 
@@ -59,6 +61,11 @@ def add_enzyme_autodiff(psyir, target_name):
             rhs = assign.rhs
             if not (isinstance(rhs, Call) and rhs.routine.name == target_name):
                 continue
+            if not reverse:
+                raise NotImplementedError(
+                    "Forward mode not yet implemented for functions because an"
+                    " additional return value would be required"
+                )
             _transform_function_call(routine, assign, rhs)
             return
 
@@ -68,7 +75,7 @@ def add_enzyme_autodiff(psyir, target_name):
                 continue  # Already handled by the loop above.
             if call.routine.name != target_name:
                 continue
-            _transform_subroutine_call(routine, call)
+            _transform_subroutine_call(routine, call, reverse)
             return
 
 
@@ -76,8 +83,11 @@ def _transform_function_call(routine, assign, call):
     """Insert an Enzyme call after a function assignment.
 
     Given the form ``<y> = <f>(<x1>, <x2>, ...)``, a shadow variable ``d<xi>`` is
-    created for each argument and is zeroed. Then ``enzyme_autodiff`` is called on the
-    primal function with interleaved primal and shadow arguments.
+    created for each argument and is zeroed. Then the specified function hook is called
+    on the primal function with interleaved primal and shadow arguments.
+
+    In the case of functions, it only makes sense to use `enzyme_autodiff`, so reverse
+    mode is assumed.
 
     :param routine: the routine containing the call.
     :type routine: :py:class:`psyclone.psyir.nodes.Routine`
@@ -108,26 +118,27 @@ def _transform_function_call(routine, assign, call):
             idx + 1 + i
         )
 
-    # Call enzyme_autodiff with interleaved primal/shadow argument pairs
+    # Call function hook with interleaved primal/shadow argument pairs
     # No seed is needed for the output since the procedure is a function, not a
     # subroutine.
     func = call.routine.symbol
-    autodiff_args = [Reference(func)]
+    hook_name = "enzyme_autodiff"
+    hook_args = [Reference(func)]
     for arg, shadow in zip(args, shadows):
-        autodiff_args.append(arg.copy())
-        autodiff_args.append(Reference(shadow))
-    autodiff = _get_or_import_routine(table, "enzyme_autodiff")
-    parent.addchild(Call.create(autodiff, autodiff_args), idx + 1 + len(shadows))
+        hook_args.append(arg.copy())
+        hook_args.append(Reference(shadow))
+    hook = _get_or_import_routine(table, hook_name)
+    parent.addchild(Call.create(hook, hook_args), idx + 1 + len(shadows))
 
 
-def _transform_subroutine_call(routine, call):
+def _transform_subroutine_call(routine, call, reverse=True):
     """Insert an Enzyme call after a standalone subroutine call.
 
     Given the form ``call <f>(<arg1>, <arg2>, ...)``, a shadow variable is created for
     each argument. The intent of each argument is inspected to determine whether its
     shadow should be seeded (``intent(out)`` or ``intent(inout)``) or zeroed
     (``intent(in)``). All output shadows are seeded with ``1.0`` and all input shadows
-    are zeroed. Then ``enzyme_autodiff`` is called on the primal subroutine with
+    are zeroed. Then the specified function hook is called on the primal subroutine with
     interleaved primal and shadow arguments.
 
     Keyword arguments in any order are handled correctly via the argument mapping
@@ -139,6 +150,8 @@ def _transform_subroutine_call(routine, call):
     :type routine: :py:class:`psyclone.psyir.nodes.Routine`
     :param call: the call to the target subroutine.
     :type call: :py:class:`psyclone.psyir.nodes.Call`
+    :param reverse: use `enzyme_autodiff` hook if True else `enzyme_fwddiff`
+    :type reverse: bool
     """
     table = routine.symbol_table
     args = call.arguments
@@ -164,17 +177,18 @@ def _transform_subroutine_call(routine, call):
     parent = call.parent
     idx = call.position
     for i, (shadow, output) in enumerate(zip(shadows, is_output)):
-        seed = "1.0" if output else "0.0"
+        seed = "1.0" if (output == reverse) else "0.0"
         parent.addchild(
             Assignment.create(Reference(shadow), Literal(seed, shadow.datatype)),
-            idx + 1 + i
+            idx + int(reverse) + i
         )
 
-    # Call enzyme_autodiff with interleaved primal/shadow argument pairs.
+    # Call function hook with interleaved primal/shadow argument pairs.
     func = call.routine.symbol
-    autodiff_args = [Reference(func)]
+    hook_name = "enzyme_autodiff" if reverse else "enzyme_fwddiff"
+    hook_args = [Reference(func)]
     for arg, shadow in zip(args, shadows):
-        autodiff_args.append(arg.copy())
-        autodiff_args.append(Reference(shadow))
-    autodiff = _get_or_import_routine(table, "enzyme_autodiff")
-    parent.addchild(Call.create(autodiff, autodiff_args), idx + 1 + len(shadows))
+        hook_args.append(arg.copy())
+        hook_args.append(Reference(shadow))
+    hook = _get_or_import_routine(table, hook_name)
+    parent.addchild(Call.create(hook, hook_args), idx + 1 + len(shadows))
