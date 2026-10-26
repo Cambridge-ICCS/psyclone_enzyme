@@ -49,7 +49,10 @@ jobs:
         set -eo pipefail
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
         sudo apt-add-repository "deb http://apt.llvm.org/`lsb_release -c | cut -f2`/ llvm-toolchain-`lsb_release -c | cut -f2`-${{ matrix.llvm }} main"
-        sudo apt-get update && sudo apt-get install -y cmake gcc g++ llvm-${{ matrix.llvm }}-dev libomp-${{ matrix.llvm }}-dev ninja-build pip clang-${{ matrix.llvm }} flang-${{ matrix.llvm }}
+        sudo apt-get update
+        sudo apt-get install -y cmake gcc g++ ninja-build pip \
+          "llvm-${{ matrix.llvm }}-dev" "libomp-${{ matrix.llvm }}-dev" \
+          "clang-${{ matrix.llvm }}" "flang-${{ matrix.llvm }}"
         sudo python3 -m pip install lit
 
     - name: Checkout psyclone_enzyme repository
@@ -63,24 +66,30 @@ jobs:
 
     - name: Install Enzyme
       run: |
+        # Clone the Enzyme repo
         git clone https://github.com/EnzymeAD/enzyme.git
         cd enzyme
+        # Generate Enzyme build system
         rm -rf build && mkdir build && cd build
-        cmake ../enzyme -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
-          -DLLVM_DIR=/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm \
+        cmake ../enzyme -GNinja -DCMAKE_BUILD_TYPE="${{ matrix.build }}" \
+          -DLLVM_DIR="/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm" \
           -DLLVM_EXTERNAL_LIT=`which lit` \
           -DENZYME_FORTRAN=ON \
           -DENZYME_FLANG=ON \
-          -DCMAKE_Fortran_COMPILER=${{ matrix.compiler }}-${{ matrix.llvm }}
-        ninja LLVMEnzyme-${{ matrix.llvm }} FlangEnzyme-${{ matrix.llvm }}
-        cd ../..
+          -DCMAKE_Fortran_COMPILER="${{ matrix.compiler }}-${{ matrix.llvm }}"
+        # Build Enzyme's LLVM and Flang plugins
+        ninja "LLVMEnzyme-${{ matrix.llvm }}" "FlangEnzyme-${{ matrix.llvm }}"
 
     - name: Build and run psyclone_enzyme tests
       run: |
         mkdir -p build_tests
         cd build_tests
-        cmake .. -GNinja -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
-          -DLLVM_DIR=/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm \
-          -DCMAKE_Fortran_COMPILER=${{ matrix.compiler }}-${{ matrix.llvm }} \
+        # Download default PSyclone config file
+        curl -O https://raw.githubusercontent.com/stfc/PSyclone/refs/heads/master/config/psyclone.cfg
+        # Built tests
+        cmake .. -GNinja -DCMAKE_BUILD_TYPE="${{ matrix.build }}" \
+          -DLLVM_DIR="/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm" \
+          -DCMAKE_Fortran_COMPILER="${{ matrix.compiler }}-${{ matrix.llvm }}" \
           -DEnzyme_BINARY_DIR="../enzyme/build"
+        # Run tests
         ninja check-psyclone-enzyme
