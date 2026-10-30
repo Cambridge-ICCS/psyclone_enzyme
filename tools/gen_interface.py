@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+"""Generate an explicit ``interface`` block for forward or reverse mode differentiation.
+
+This module parses Fortran subroutines and functions using PSyclone's PSyIR, extracts
+argument signatures, and provides utilities for synthesising the derivative interface
+that Enzyme requires.
+"""
+
 from dataclasses import dataclass
 from typing import Literal
 
@@ -99,6 +106,7 @@ class ProcedureSignature:
     pure: bool
     module: str | None
     uses: tuple[str, ...]
+
 
 def get_intent(sym: Symbol) -> Intent:
     """Map a symbol's argument access onto an ``Intent`` string.
@@ -261,7 +269,7 @@ def _intent_from_prefix(prefix: str) -> Intent:
 # Attribute keywords a data dummy argument may carry.
 # intent(...), dimension(...) and codimension[...] have dedicated fields
 # (intent, rank/shape_kind, coarray) so are excluded. bind(c) is excluded because a data dummy
-# argument cannot carry it (a BIND(C) variable must be a module variable or common block). 
+# argument cannot carry it (a BIND(C) variable must be a module variable or common block).
 ATTRIBUTE_KEYWORDS = frozenset(
     {
         "value",
@@ -372,9 +380,7 @@ def extract_signature(routine: Routine) -> ProcedureSignature:
     """
     return_symbol = getattr(routine, "return_symbol", None)
     kind = "function" if return_symbol is not None else "subroutine"
-    args = tuple(
-        _dummy_from_symbol(sym) for sym in routine.symbol_table.argument_list
-    )
+    args = tuple(_dummy_from_symbol(sym) for sym in routine.symbol_table.argument_list)
     return_arg = (
         _dummy_from_symbol(return_symbol) if return_symbol is not None else None
     )
@@ -383,7 +389,7 @@ def extract_signature(routine: Routine) -> ProcedureSignature:
         kind=kind,
         args=args,
         return_arg=return_arg,
-        bind_c=False, # false as bind prime use is for activity descriptors
+        bind_c=False,  # false as bind prime use is for activity descriptors
         elemental=False,
         pure=False,
         module=None,  # TODO: _module_name
@@ -396,7 +402,9 @@ def extract_signature(routine: Routine) -> ProcedureSignature:
 # ---------------------------------------------------------------------------
 
 
-def reverse_mode_shadow_intent(procedure_kind: ProcedureKind, primal_intent: Intent) -> Intent:
+def reverse_mode_shadow_intent(
+    procedure_kind: ProcedureKind, primal_intent: Intent
+) -> Intent:
     """Map a primal argument's intent to its reverse-mode shadow intent.
 
     The mapping depends on the procedure kind (verified against the reverse
@@ -447,7 +455,6 @@ def _format_dummy(arg: DummyArg) -> str:
 
 
 if __name__ == "__main__":
-
     reader = FortranReader()
     psyir = reader.psyir_from_source(SOURCE)
     routine = psyir.walk(Routine)[0]
