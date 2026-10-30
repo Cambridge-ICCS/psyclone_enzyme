@@ -23,5 +23,8 @@ dependencies = ["psyclone==3.2.2", "fparser==0.2.1"]
 [project.urls]
 Repository = "https://github.com/Cambridge-ICCS/psyclone_enzyme"
 
+[project.scripts]
+gen_interface = "psyclone_enzyme.gen_interface:main_cli"
+
 [tool.setuptools]
 packages = ["psyclone_enzyme"]
