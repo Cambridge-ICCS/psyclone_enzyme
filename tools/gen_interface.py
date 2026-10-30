@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-"""Generate an explicit ``interface`` block for forward or reverse mode differentiation.
+"""CLI entrypoint: generate an Enzyme autodiff interface for a Fortran routine.
 
-This module parses Fortran subroutines and functions using PSyclone's PSyIR, extracts
-argument signatures, and provides utilities for synthesising the derivative interface
-that Enzyme requires.
+Takes a Fortran source file, parses its first routine with PSyclone, runs the
+three extraction-to-emission pipeline stages (``extract.py`` -> ``rules.py`` ->
+``emit.py``), and prints both the extracted argument model and the generated
+``interface`` block.
+
+Usage:  python gen_interface.py <source.f90>
 """
+
 
 import argparse
 import sys
