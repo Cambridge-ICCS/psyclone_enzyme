@@ -112,7 +112,10 @@ def _generate_explicit_interface(table, call, func_name):
 
     sig = extract_signature(callee)
     interface_ir = build_autodiff_interface(sig)
-    raw_text = "\n".join(emit(interface_ir))
+    # Indent the interior lines by one extra level so the interface block aligns when
+    # the Fortran writer indents the declaration into the routine body.
+    emitted = emit(interface_ir)
+    raw_text = "\n".join(emitted[0:1] + ["  " + line for line in emitted[1:]])
 
     hook = table.new_symbol(interface_ir.name, symbol_type=RoutineSymbol)
     hook._datatype = UnsupportedFortranType(raw_text)
