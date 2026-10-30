@@ -17,6 +17,7 @@ from pathlib import Path
 
 from psyclone.psyir.frontend.fortran import FortranReader
 from psyclone.psyir.nodes import Routine
+
 from psyclone_enzyme.interface_generation.emit import emit
 from psyclone_enzyme.interface_generation.extract import extract_signature
 from psyclone_enzyme.interface_generation.model import DummyArg
@@ -72,19 +73,20 @@ def main_cli():
 
     reader = FortranReader()
     psyir = reader.psyir_from_source(source)
-    # TODO: the CLI is bare minimum. Still to do next: take a routine-name argument
-    # (walk(Routine)[0] only picks the primal when it is first in the file), and
-    # print just the emitted interface instead of the _format_dummy model dump.
     routine = psyir.walk(Routine)[0]
     sig = extract_signature(routine)
 
-    print(f"{sig.kind} {sig.name}")
-    for arg in sig.args:
-        print(_format_dummy(arg))
-    # checks if function or subroutine
-    if sig.return_arg is not None:
-        print("  returns:")
-        print(_format_dummy(sig.return_arg))
+    # TODO: the CLI is bare minimum. Still to do next: take a routine-name argument
+    # (walk(Routine)[0] only picks the primal when it is first in the file), and
+    # print just the emitted interface instead of the _format_dummy model dump.
+    #
+    # print(f"{sig.kind} {sig.name}")
+    # for arg in sig.args:
+    #     print(_format_dummy(arg))
+    # # checks if function or subroutine
+    # if sig.return_arg is not None:
+    #     print("  returns:")
+    #     print(_format_dummy(sig.return_arg))
 
     # run the rest of the pipeline (rules, then emit) and print the block.
     print()
