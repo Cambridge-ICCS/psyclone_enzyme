@@ -1,0 +1,97 @@
+name: Test suite
+
+on:
+  push:
+    branches: 
+    - main
+    paths: &paths
+      - '.github/workflows/test_suite.yml'
+      - 'psyclone_enzyme/**'
+      - 'pyproject.toml'
+      - '**/CMakeLists.txt'
+      - '**/*.f90'
+      - '**/*.py'
+  pull_request:
+    paths: *paths
+  merge_group:
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  flang:
+    name: ${{matrix.compiler}} ${{matrix.llvm}} ${{matrix.build}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+          - Release
+          - Debug
+        os:
+          - ubuntu-latest
+        compiler:
+          - flang
+        llvm:
+          - 21
+          - 22
+          - 23
+        mpi:
+          - 2021.7.1
+    timeout-minutes: 60
+    steps:
+
+    - name: Install LLVM, Clang, and Flang
+      run: |
+        set -eo pipefail
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+        sudo apt-add-repository "deb http://apt.llvm.org/`lsb_release -c | cut -f2`/ llvm-toolchain-`lsb_release -c | cut -f2`-${{ matrix.llvm }} main"
+        sudo apt-get update
+        sudo apt-get install -y cmake gcc g++ ninja-build pip \
+          "llvm-${{ matrix.llvm }}-dev" "libomp-${{ matrix.llvm }}-dev" \
+          "clang-${{ matrix.llvm }}" "flang-${{ matrix.llvm }}"
+        sudo python3 -m pip install lit
+
+    - name: Checkout psyclone_enzyme repository
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
+
+    - name: Install psyclone_enzyme
+      run: |
+        sudo python3 -m pip install .
+
+    - name: Install Enzyme
+      run: |
+        # Clone the Enzyme repo
+        git clone https://github.com/EnzymeAD/enzyme.git
+        cd enzyme
+        # Generate Enzyme build system
+        rm -rf build && mkdir build && cd build
+        cmake ../enzyme -GNinja -DCMAKE_BUILD_TYPE="${{ matrix.build }}" \
+          -DLLVM_DIR="/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm" \
+          -DLLVM_EXTERNAL_LIT=`which lit` \
+          -DENZYME_FORTRAN=ON \
+          -DENZYME_FLANG=ON \
+          -DCMAKE_Fortran_COMPILER="${{ matrix.compiler }}-${{ matrix.llvm }}"
+        # Build Enzyme's LLVM and Flang plugins plus the Fortran bindings module
+        ninja "LLVMEnzyme-${{ matrix.llvm }}" "FlangEnzyme-${{ matrix.llvm }}" EnzymeFortran
+
+    - name: Build and run psyclone_enzyme tests
+      run: |
+        mkdir -p build_tests
+        cd build_tests
+        # Built tests
+        cmake .. -GNinja -DCMAKE_BUILD_TYPE="${{ matrix.build }}" \
+          -DLLVM_DIR="/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm" \
+          -DCMAKE_Fortran_COMPILER="${{ matrix.compiler }}-${{ matrix.llvm }}" \
+          -DEnzyme_BINARY_DIR="../enzyme/build"
+        # Download default PSyclone config file
+        mkdir -p tests/.psyclone
+        curl -o tests/.psyclone/psyclone.cfg \
+          https://raw.githubusercontent.com/stfc/PSyclone/refs/heads/master/config/psyclone.cfg
+        # Run tests
+        ninja check-psyclone-enzyme
