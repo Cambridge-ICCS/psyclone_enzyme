@@ -22,6 +22,7 @@ from psyclone.psyir.symbols.datatypes import (
     DataType,
     UnsupportedFortranType,
 )
+
 from psyclone_enzyme.interface_generation.model import (
     BaseType,
     DummyArg,
@@ -29,6 +30,8 @@ from psyclone_enzyme.interface_generation.model import (
     ProcedureSignature,
     ShapeKind,
 )
+
+__all__ = []
 
 Access = ArgumentInterface.Access
 

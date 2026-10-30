@@ -17,6 +17,8 @@ from psyclone_enzyme.interface_generation.interface_model import (
     InterfaceArg,
 )
 
+__all__ = []
+
 INDENT = "  "
 
 

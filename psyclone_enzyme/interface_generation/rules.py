@@ -21,6 +21,8 @@ from psyclone_enzyme.interface_generation.model import (
     ProcedureSignature,
 )
 
+__all__ = []
+
 
 def hook_name(primal_name: str) -> str:
     """Return the Enzyme reverse-mode hook name for a primal routine.
