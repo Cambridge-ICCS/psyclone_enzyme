@@ -29,34 +29,41 @@ configure_lit_site_cfg(
 set(PSYCLONE_PROCESSED_SOURCES)
 
 # Test directories, one per differentiation mode handled by
-# psyclone_enzyme. Each holds its own trans_<keyword>.py scripts and
-# test_<keyword>_*.f90 inputs.
+# psyclone_enzyme. Each holds its own trans_<name>_<variant>.py scripts and
+# test_<name>_*.f90 inputs.
 set(PSYCLONE_TEST_DIRS reverse_mode forward_mode)
 
-# Test keywords: for each keyword <kw>, every mode directory listed in
-# PSYCLONE_TEST_DIRS provides a transformation script trans_<kw>.py and
-# one or more inputs test_<kw>_*.f90.
-set(TEST_KEYWORDS square)
+# Test names: for each name, every mode directory listed in
+# PSYCLONE_TEST_DIRS provides one or more inputs test_<name>_*.f90
+# and two transformation scripts trans_<name>_implicit.py and
+# trans_<name>_explicit.py.
+set(TEST_NAMES square)
 
-# For every test_<keyword>_*.f90 file in <mode_dir>, declare a rule that
-# runs PSyclone with <mode_dir>/trans_<keyword>.py to produce the
-# processed file under ${CMAKE_CURRENT_BINARY_DIR}/<mode_dir>/processed/,
-# and append it to PSYCLONE_PROCESSED_SOURCES. A macro rather than a
-# function so that the APPEND updates the parent-scope list in place.
-macro(psyclone_enrol_tests mode_dir keyword)
+# Interface variants: implicit (use the enzyme module) or explicit
+# (generate a Fortran interface block).
+set(TEST_VARIANTS implicit explicit)
+
+# For every test_<name>_*.f90 file in <mode_dir>, declare a rule that
+# runs PSyclone with <mode_dir>/trans_<name>_<variant>.py to produce the
+# processed file under
+# ${CMAKE_CURRENT_BINARY_DIR}/<mode_dir>/processed/<variant>/, and append
+# it to PSYCLONE_PROCESSED_SOURCES. A macro rather than a function so
+# that the APPEND updates the parent-scope list in place.
+macro(psyclone_enrol_tests mode_dir name variant)
   set(TRANS_SCRIPT
-      "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/trans_${keyword}.py")
+      "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/trans_${name}_${variant}.py")
   file(GLOB PSYCLONE_TEST_SOURCES CONFIGURE_DEPENDS
-       "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/test_${keyword}_*.f90")
+       "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/test_${name}_*.f90")
 
   foreach(src IN LISTS PSYCLONE_TEST_SOURCES)
     get_filename_component(fname "${src}" NAME)
-    set(out "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${fname}")
+    set(out
+        "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${variant}/${fname}")
     add_custom_command(
       OUTPUT "${out}"
       COMMAND
         ${CMAKE_COMMAND} -E make_directory
-        "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed"
+        "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${variant}"
       COMMAND
         # fmt: off
         ${PSYCLONE_EXECUTABLE}
@@ -66,15 +73,17 @@ macro(psyclone_enrol_tests mode_dir keyword)
           "${src}"
         # fmt: on
       DEPENDS "${src}" "${TRANS_SCRIPT}"
-      COMMENT "PSyclone: ${mode_dir}/${fname}"
+      COMMENT "PSyclone: ${mode_dir}/${variant}/${fname}"
       VERBATIM)
     list(APPEND PSYCLONE_PROCESSED_SOURCES "${out}")
   endforeach()
 endmacro()
 
 foreach(mode_dir IN LISTS PSYCLONE_TEST_DIRS)
-  foreach(keyword IN LISTS TEST_KEYWORDS)
-    psyclone_enrol_tests(${mode_dir} ${keyword})
+  foreach(name IN LISTS TEST_NAMES)
+    foreach(variant IN LISTS TEST_VARIANTS)
+      psyclone_enrol_tests(${mode_dir} ${name} ${variant})
+    endforeach()
   endforeach()
 endforeach()
 
