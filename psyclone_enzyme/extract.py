@@ -1,7 +1,7 @@
 """Extract: PSyIR routine -> primal IR (:class:`~tools.model.ProcedureSignature`).
 
 Stage 1 of the pipeline. Walks a PSyIR ``Routine``'s argument list and builds a
-:class:`~tools.model.ProcedureSignature`, recovering type, intent, shape and
+:class:`~psyclone_enzyme.model.ProcedureSignature`, recovering type, intent, shape and
 attribute information from structured PSyIR where available, and otherwise from
 the raw declaration text for the ``UnsupportedFortranType`` cases (``value``,
 ``complex``, ...). The raw-declaration parsers (``_split_top_level_commas`` and
@@ -23,7 +23,7 @@ from psyclone.psyir.symbols.datatypes import (
     UnsupportedFortranType,
 )
 
-from tools.model import (
+from psyclone_enzyme.model import (
     BaseType,
     DummyArg,
     Intent,

@@ -13,19 +13,15 @@ Usage:  python gen_interface.py <source.f90>
 
 
 import argparse
-import sys
 from pathlib import Path
 
 from psyclone.psyir.frontend.fortran import FortranReader
 from psyclone.psyir.nodes import Routine
 
-# Put the repo root on the path so ``from tools.emit`` resolves
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from tools.emit import emit
-from tools.extract import extract_signature
-from tools.model import DummyArg
-from tools.rules import build_autodiff_interface
+from psyclone_enzyme.emit import emit
+from psyclone_enzyme.extract import extract_signature
+from psyclone_enzyme.model import DummyArg
+from psyclone_enzyme.rules import build_autodiff_interface
 
 __all__ = []
 

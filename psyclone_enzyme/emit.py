@@ -11,7 +11,11 @@ child block.
 
 from __future__ import annotations
 
-from tools.interface_model import AutodiffInterface, CallbackInterface, InterfaceArg
+from psyclone_enzyme.interface_model import (
+    AutodiffInterface,
+    CallbackInterface,
+    InterfaceArg,
+)
 
 INDENT = "  "
 
