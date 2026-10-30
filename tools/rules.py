@@ -55,7 +55,9 @@ def shadow_name(arg_name: str) -> str:
     return f"d{arg_name}"
 
 
-def reverse_mode_shadow_intent(procedure_kind: ProcedureKind, primal_intent: Intent) -> Intent:
+def reverse_mode_shadow_intent(
+    procedure_kind: ProcedureKind, primal_intent: Intent
+) -> Intent:
     """Map a primal argument's intent to its reverse-mode shadow intent.
 
     The mapping depends on the procedure kind (verified against the reverse
@@ -77,8 +79,8 @@ def primal_interface_arg(dummy: DummyArg) -> InterfaceArg:
     """Build the `InterfaceArg`, mapped from the primals `DummyArg`.
 
     The hook re-declares each primal argument unchanged (same type, shape,
-    intent and attributes such as ``value``), so the call matches the primal 
-    ABI exactly. The raw text fields populated during extraction map straight 
+    intent and attributes such as ``value``), so the call matches the primal
+    ABI exactly. The raw text fields populated during extraction map straight
     into the `InterfaceArg.
     """
     return InterfaceArg(
@@ -91,7 +93,9 @@ def primal_interface_arg(dummy: DummyArg) -> InterfaceArg:
     )
 
 
-def shadow_interface_arg(dummy: DummyArg, procedure_kind: ProcedureKind) -> InterfaceArg:
+def shadow_interface_arg(
+    dummy: DummyArg, procedure_kind: ProcedureKind
+) -> InterfaceArg:
     """Build the shadow (derivative) :class:`InterfaceArg` for an active primal arg.
 
     Mirrors the primal's type and shape but renames it (``x`` to ``dx`` via
@@ -127,7 +131,9 @@ def build_callback_interface(signature: ProcedureSignature) -> CallbackInterface
     )
 
 
-def expand_primal_arg(dummy: DummyArg, procedure_kind: ProcedureKind) -> tuple[InterfaceArg, ...]:
+def expand_primal_arg(
+    dummy: DummyArg, procedure_kind: ProcedureKind
+) -> tuple[InterfaceArg, ...]:
     """Expand one primal arg into primal arg and shadow arg.
 
     Every arg contributes its primal copy; an active arg additionally
@@ -143,7 +149,7 @@ def expand_primal_arg(dummy: DummyArg, procedure_kind: ProcedureKind) -> tuple[I
 def build_autodiff_interface(signature: ProcedureSignature) -> AutodiffInterface:
     """Build the reverse-mode :class:`AutodiffInterface` for a primal.
 
-    The interface body is every primal arg expanded inorder (primal copy, plus 
+    The interface body is every primal arg expanded inorder (primal copy, plus
     a shadow for active args), and it carries the nested callback interface.
     """
     body = tuple(

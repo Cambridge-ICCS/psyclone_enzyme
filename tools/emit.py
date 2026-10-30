@@ -75,9 +75,7 @@ def emit(autodiff: AutodiffInterface) -> list[str]:
     body_indent = 2 * INDENT
     # hook argument list: the callback dummy first, then every body arg
     # (e.g. "sr, n, x, dx, y, dy").
-    names = ", ".join(
-        [autodiff.callback_name] + [arg.name for arg in autodiff.args]
-    )
+    names = ", ".join([autodiff.callback_name] + [arg.name for arg in autodiff.args])
 
     # "interface" at column 0, then the hook header one indent in
     # ("  subroutine <hook>(...)"). autodiff.kind is always "subroutine" here.
@@ -87,8 +85,7 @@ def emit(autodiff: AutodiffInterface) -> list[str]:
         lines.append(body_indent + "use iso_c_binding, only: c_int")
 
     lines.extend(
-        body_indent + line
-        for line in render_callback_interface(callback_interface)
+        body_indent + line for line in render_callback_interface(callback_interface)
     )
     # bind the callback dummy to its interface: "procedure(<iface>) :: <dummy>".
     lines.append(

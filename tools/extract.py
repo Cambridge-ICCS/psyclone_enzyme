@@ -33,6 +33,7 @@ from tools.model import (
 
 Access = ArgumentInterface.Access
 
+
 def get_intent(sym: Symbol) -> Intent:
     """Map a symbol's argument access onto an ``Intent`` string.
 
@@ -179,7 +180,7 @@ def _base_type_from_prefix(prefix: str) -> BaseType:
 def _type_spec_raw_from_prefix(prefix: str) -> str:
     """Return the leading type token of a declaration prefix, lowercased.
 
-    This type token is kept whole so a kind or length selector stays attached 
+    This type token is kept whole so a kind or length selector stays attached
     e.g. (``real(kind=8)``, ``character(len=*)``) remains intact.
 
     """
@@ -204,7 +205,7 @@ def _intent_from_prefix(prefix: str) -> Intent:
 # Attribute keywords a data dummy argument may carry.
 # intent(...), dimension(...) and codimension[...] have dedicated fields
 # (intent, rank/shape_kind, coarray) so are excluded. bind(c) is excluded because a data dummy
-# argument cannot carry it (a BIND(C) variable must be a module variable or common block). 
+# argument cannot carry it (a BIND(C) variable must be a module variable or common block).
 ATTRIBUTE_KEYWORDS = frozenset(
     {
         "value",
@@ -253,7 +254,7 @@ def _shape_raw_from_prefix(prefix: str) -> str | None:
 def _writer_prefix(sym: Symbol, writer: FortranWriter) -> str:
     """Render ``sym``'s declaration and return its prefix (text before ``::``).
 
-    ``writer.gen_vardecl`` reconstructs a declaration for any symbol, e.g 
+    ``writer.gen_vardecl`` reconstructs a declaration for any symbol, e.g
     (``real, dimension(n), intent(in) :: x``)
     """
     return _decl_prefix(writer.gen_vardecl(sym))
@@ -352,7 +353,7 @@ def extract_signature(routine: Routine) -> ProcedureSignature:
         kind=kind,
         args=args,
         return_arg=return_arg,
-        bind_c=False, # false as bind prime use is for activity descriptors
+        bind_c=False,  # false as bind prime use is for activity descriptors
         elemental=False,
         pure=False,
         module=None,  # TODO: _module_name
