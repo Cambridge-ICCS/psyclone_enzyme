@@ -31,7 +31,6 @@ from tools.model import (
     ShapeKind,
 )
 
-
 Access = ArgumentInterface.Access
 
 def get_intent(sym: Symbol) -> Intent:
