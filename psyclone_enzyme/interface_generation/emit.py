@@ -11,7 +11,7 @@ child block.
 
 from __future__ import annotations
 
-from psyclone_enzyme.interface_model import (
+from psyclone_enzyme.interface_generation.interface_model import (
     AutodiffInterface,
     CallbackInterface,
     InterfaceArg,

@@ -22,8 +22,7 @@ from psyclone.psyir.symbols.datatypes import (
     DataType,
     UnsupportedFortranType,
 )
-
-from psyclone_enzyme.model import (
+from psyclone_enzyme.interface_generation.model import (
     BaseType,
     DummyArg,
     Intent,

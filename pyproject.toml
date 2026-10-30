@@ -26,5 +26,5 @@ Repository = "https://github.com/Cambridge-ICCS/psyclone_enzyme"
 [project.scripts]
 gen_interface = "psyclone_enzyme.gen_interface:main_cli"
 
-[tool.setuptools]
-packages = ["psyclone_enzyme"]
+[tool.setuptools.packages.find]
+include = ["psyclone_enzyme*"]

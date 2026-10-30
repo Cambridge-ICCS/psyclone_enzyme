@@ -17,11 +17,10 @@ from pathlib import Path
 
 from psyclone.psyir.frontend.fortran import FortranReader
 from psyclone.psyir.nodes import Routine
-
-from psyclone_enzyme.emit import emit
-from psyclone_enzyme.extract import extract_signature
-from psyclone_enzyme.model import DummyArg
-from psyclone_enzyme.rules import build_autodiff_interface
+from psyclone_enzyme.interface_generation.emit import emit
+from psyclone_enzyme.interface_generation.extract import extract_signature
+from psyclone_enzyme.interface_generation.model import DummyArg
+from psyclone_enzyme.interface_generation.rules import build_autodiff_interface
 
 __all__ = []
 
@@ -66,9 +65,10 @@ def main_cli():
     """
     parsed_args = parse_user_input()
     try:
-        source = args.source.read_text()
+        source = parsed_args.source.read_text()
     except OSError as exc:
-        parser.error(str(exc))
+        print(f"Error reading file: {exc}", file=__import__('sys').stderr)
+        exit(1)
 
     reader = FortranReader()
     psyir = reader.psyir_from_source(source)

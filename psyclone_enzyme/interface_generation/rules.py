@@ -9,12 +9,12 @@ active args), and mirroring the primal in the nested callback interface.
 
 from __future__ import annotations
 
-from psyclone_enzyme.interface_model import (
+from psyclone_enzyme.interface_generation.interface_model import (
     AutodiffInterface,
     CallbackInterface,
     InterfaceArg,
 )
-from psyclone_enzyme.model import (
+from psyclone_enzyme.interface_generation.model import (
     DummyArg,
     Intent,
     ProcedureKind,
