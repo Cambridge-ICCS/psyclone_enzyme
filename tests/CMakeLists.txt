@@ -52,31 +52,34 @@ set(TEST_VARIANTS implicit explicit)
 macro(psyclone_enrol_tests mode_dir name variant)
   set(TRANS_SCRIPT
       "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/trans_${name}_${variant}.py")
-  file(GLOB PSYCLONE_TEST_SOURCES CONFIGURE_DEPENDS
-       "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/test_${name}_*.f90")
+  # Skip (mode, name, variant) combinations that have no trans script.
+  if(EXISTS "${TRANS_SCRIPT}")
+    file(GLOB PSYCLONE_TEST_SOURCES CONFIGURE_DEPENDS
+         "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/test_${name}_*.f90")
 
-  foreach(src IN LISTS PSYCLONE_TEST_SOURCES)
-    get_filename_component(fname "${src}" NAME)
-    set(out
-        "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${variant}/${fname}")
-    add_custom_command(
-      OUTPUT "${out}"
-      COMMAND
-        ${CMAKE_COMMAND} -E make_directory
-        "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${variant}"
-      COMMAND
-        # fmt: off
-        ${PSYCLONE_EXECUTABLE}
-          --keep-comments
-          -s "${TRANS_SCRIPT}"
-          -o "${out}"
-          "${src}"
-        # fmt: on
-      DEPENDS "${src}" "${TRANS_SCRIPT}"
-      COMMENT "PSyclone: ${mode_dir}/${variant}/${fname}"
-      VERBATIM)
-    list(APPEND PSYCLONE_PROCESSED_SOURCES "${out}")
-  endforeach()
+    foreach(src IN LISTS PSYCLONE_TEST_SOURCES)
+      get_filename_component(fname "${src}" NAME)
+      set(out
+          "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${variant}/${fname}")
+      add_custom_command(
+        OUTPUT "${out}"
+        COMMAND
+          ${CMAKE_COMMAND} -E make_directory
+          "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${variant}"
+        COMMAND
+          # fmt: off
+          ${PSYCLONE_EXECUTABLE}
+            --keep-comments
+            -s "${TRANS_SCRIPT}"
+            -o "${out}"
+            "${src}"
+          # fmt: on
+        DEPENDS "${src}" "${TRANS_SCRIPT}"
+        COMMENT "PSyclone: ${mode_dir}/${variant}/${fname}"
+        VERBATIM)
+      list(APPEND PSYCLONE_PROCESSED_SOURCES "${out}")
+    endforeach()
+  endif()
 endmacro()
 
 foreach(mode_dir IN LISTS PSYCLONE_TEST_DIRS)
