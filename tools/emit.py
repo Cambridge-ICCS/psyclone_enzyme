@@ -11,10 +11,12 @@ child block.
 
 from __future__ import annotations
 
+from tools.interface_model import AutodiffInterface, CallbackInterface, InterfaceArg
+
 INDENT = "  "
 
 
-def render_declaration(arg):
+def render_declaration(arg: InterfaceArg) -> str:
     """Render one :class:`InterfaceArg` as a Fortran declaration line.
 
     Assembles the pieces in canonical order: type spec, shape, then any
@@ -32,7 +34,7 @@ def render_declaration(arg):
     return f"{', '.join(parts)} :: {arg.name}"
 
 
-def render_callback_interface(callback):
+def render_callback_interface(callback: CallbackInterface) -> list[str]:
     """Render a :class:`CallbackInterface` as a list of Fortran lines.
 
     Returns the nested ``interface ... end interface`` block at column 0 with
@@ -57,7 +59,7 @@ def render_callback_interface(callback):
     return lines
 
 
-def emit(autodiff):
+def emit(autodiff: AutodiffInterface) -> list[str]:
     """Render an :class:`AutodiffInterface` as the full Fortran interface block.
 
     Returns a list of lines at column 0 (the caller joins with newlines). The

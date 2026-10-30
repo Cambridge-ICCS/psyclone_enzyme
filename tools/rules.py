@@ -9,10 +9,20 @@ active args), and mirroring the primal in the nested callback interface.
 
 from __future__ import annotations
 
-from tools.interface_model import AutodiffInterface, CallbackInterface, InterfaceArg
+from tools.interface_model import (
+    AutodiffInterface,
+    CallbackInterface,
+    InterfaceArg,
+)
+from tools.model import (
+    DummyArg,
+    Intent,
+    ProcedureKind,
+    ProcedureSignature,
+)
 
 
-def hook_name(primal_name):
+def hook_name(primal_name: str) -> str:
     """Return the Enzyme reverse-mode hook name for a primal routine.
 
     ``normalise_value`` becomes ``normalise_value__enzyme_autodiff``.
@@ -20,7 +30,7 @@ def hook_name(primal_name):
     return f"{primal_name}__enzyme_autodiff"
 
 
-def callback_name(primal_kind):
+def callback_name(primal_kind: ProcedureKind) -> str:
     """Return prefix based on primal's type.
 
     ``"sr"`` for a subroutine primal, ``"fn"`` for a function.
@@ -28,7 +38,7 @@ def callback_name(primal_kind):
     return "fn" if primal_kind == "function" else "sr"
 
 
-def callback_interface_name(primal_name, primal_kind):
+def callback_interface_name(primal_name: str, primal_kind: ProcedureKind) -> str:
     """Return the nested callback-interface name as ``{sr|fn}_<primal_name>``.
 
     ``normalise_value`` (subroutine) gives ``sr_normalise_value`` and
@@ -37,7 +47,7 @@ def callback_interface_name(primal_name, primal_kind):
     return f"{callback_name(primal_kind)}_{primal_name}"
 
 
-def shadow_name(arg_name):
+def shadow_name(arg_name: str) -> str:
     """Return the reverse-mode shadow (derivative) argument name: ``d<name>``.
 
     ``x`` becomes ``dx`` and ``y`` becomes ``dy``.
@@ -45,7 +55,7 @@ def shadow_name(arg_name):
     return f"d{arg_name}"
 
 
-def reverse_mode_shadow_intent(procedure_kind, primal_intent):
+def reverse_mode_shadow_intent(procedure_kind: ProcedureKind, primal_intent: Intent) -> Intent:
     """Map a primal argument's intent to its reverse-mode shadow intent.
 
     The mapping depends on the procedure kind (verified against the reverse
@@ -63,7 +73,7 @@ def reverse_mode_shadow_intent(procedure_kind, primal_intent):
     }[primal_intent]
 
 
-def primal_interface_arg(dummy):
+def primal_interface_arg(dummy: DummyArg) -> InterfaceArg:
     """Build the `InterfaceArg`, mapped from the primals `DummyArg`.
 
     The hook re-declares each primal argument unchanged (same type, shape,
@@ -81,7 +91,7 @@ def primal_interface_arg(dummy):
     )
 
 
-def shadow_interface_arg(dummy, procedure_kind):
+def shadow_interface_arg(dummy: DummyArg, procedure_kind: ProcedureKind) -> InterfaceArg:
     """Build the shadow (derivative) :class:`InterfaceArg` for an active primal arg.
 
     Mirrors the primal's type and shape but renames it (``x`` to ``dx`` via
@@ -99,7 +109,7 @@ def shadow_interface_arg(dummy, procedure_kind):
     )
 
 
-def build_callback_interface(signature):
+def build_callback_interface(signature: ProcedureSignature) -> CallbackInterface:
     """Build the :class:`CallbackInterface` mirroring the primal signature.
 
     The nested callback interface re-declares the primal exactly.
@@ -117,7 +127,7 @@ def build_callback_interface(signature):
     )
 
 
-def expand_primal_arg(dummy, procedure_kind):
+def expand_primal_arg(dummy: DummyArg, procedure_kind: ProcedureKind) -> tuple[InterfaceArg, ...]:
     """Expand one primal arg into primal arg and shadow arg.
 
     Every arg contributes its primal copy; an active arg additionally
@@ -130,7 +140,7 @@ def expand_primal_arg(dummy, procedure_kind):
     return tuple(args)
 
 
-def build_autodiff_interface(signature):
+def build_autodiff_interface(signature: ProcedureSignature) -> AutodiffInterface:
     """Build the reverse-mode :class:`AutodiffInterface` for a primal.
 
     The interface body is every primal arg expanded inorder (primal copy, plus 

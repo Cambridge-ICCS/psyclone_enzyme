@@ -11,15 +11,30 @@ friends) support that text fallback.
 from __future__ import annotations
 
 from psyclone.psyir.backend.fortran import FortranWriter
-from psyclone.psyir.symbols import ArgumentInterface, ArrayType, ScalarType
-from psyclone.psyir.symbols.datatypes import UnsupportedFortranType
+from psyclone.psyir.nodes import Routine
+from psyclone.psyir.symbols import (
+    ArgumentInterface,
+    ArrayType,
+    ScalarType,
+    Symbol,
+)
+from psyclone.psyir.symbols.datatypes import (
+    DataType,
+    UnsupportedFortranType,
+)
 
-from tools.model import DummyArg, ProcedureSignature
+from tools.model import (
+    BaseType,
+    DummyArg,
+    Intent,
+    ProcedureSignature,
+    ShapeKind,
+)
 
 
 Access = ArgumentInterface.Access
 
-def get_intent(sym):
+def get_intent(sym: Symbol) -> Intent:
     """Map a symbol's argument access onto an ``Intent`` string.
 
     Non-argument symbols (locals, a function's result symbol, imported
@@ -48,7 +63,7 @@ def get_intent(sym):
     return "unknown"
 
 
-def unwrap_unsupported(dtype):
+def unwrap_unsupported(dtype: DataType) -> tuple[DataType, str | None]:
     """Split an ``UnsupportedFortranType`` into its partial datatype.
 
     Returns the underlying datatype (the partial datatype when one is
@@ -66,7 +81,7 @@ def unwrap_unsupported(dtype):
     return dtype, raw_decl
 
 
-def get_base_type(sym):
+def get_base_type(sym: Symbol) -> BaseType:
     """Resolve a symbol's intrinsic element type to a ``BaseType``.
 
     Looks through array types to the element type, then maps the
@@ -96,7 +111,7 @@ def get_base_type(sym):
     return "unknown"
 
 
-def _split_top_level_commas(text):
+def _split_top_level_commas(text: str) -> list[str]:
     """Split ``text`` on commas that are not nested inside parentheses.
 
     Used to break a declaration prefix into its type/attribute tokens
@@ -118,7 +133,7 @@ def _split_top_level_commas(text):
     return parts
 
 
-def _decl_prefix(declaration):
+def _decl_prefix(declaration: str) -> str:
     """Return a declaration's attribute/type prefix (the text before ``::``).
 
     For ``"integer, value, intent(in) :: n"`` this returns
@@ -142,7 +157,7 @@ INTRINSIC_TYPES = (
 )
 
 
-def _base_type_from_prefix(prefix):
+def _base_type_from_prefix(prefix: str) -> BaseType:
     """Classify the leading type token of a declaration prefix as a ``BaseType``.
 
     Matching is case-insensitive. ``double precision`` maps to ``"real"``;
@@ -162,7 +177,7 @@ def _base_type_from_prefix(prefix):
     return "unknown"
 
 
-def _type_spec_raw_from_prefix(prefix):
+def _type_spec_raw_from_prefix(prefix: str) -> str:
     """Return the leading type token of a declaration prefix, lowercased.
 
     This type token is kept whole so a kind or length selector stays attached 
@@ -172,7 +187,7 @@ def _type_spec_raw_from_prefix(prefix):
     return _split_top_level_commas(prefix)[0].strip().lower()
 
 
-def _intent_from_prefix(prefix):
+def _intent_from_prefix(prefix: str) -> Intent:
     """Recover an ``Intent`` from an ``intent(...)`` token in the prefix.
 
     Matching is case-insensitive and tolerant of spaces (``intent ( in )``).
@@ -205,7 +220,7 @@ ATTRIBUTE_KEYWORDS = frozenset(
 )
 
 
-def _attributes_from_prefix(prefix):
+def _attributes_from_prefix(prefix: str) -> frozenset[str]:
     """Collect recognised attribute keywords (e.g. ``value``) from a prefix.
 
     Tokens that carry arguments, such as ``intent(...)`` and ``dimension(...)``,
@@ -216,7 +231,7 @@ def _attributes_from_prefix(prefix):
     return frozenset(tokens & ATTRIBUTE_KEYWORDS)
 
 
-def _shape_raw_from_prefix(prefix):
+def _shape_raw_from_prefix(prefix: str) -> str | None:
     """Return the ``dimension(...)`` token from a declaration prefix, or ``None``.
 
     The token is returned with its original case and spacing preserved (emit
@@ -236,7 +251,7 @@ def _shape_raw_from_prefix(prefix):
 # ---------------------------------------------------------------------------
 
 
-def _writer_prefix(sym, writer):
+def _writer_prefix(sym: Symbol, writer: FortranWriter) -> str:
     """Render ``sym``'s declaration and return its prefix (text before ``::``).
 
     ``writer.gen_vardecl`` reconstructs a declaration for any symbol, e.g 
@@ -245,7 +260,7 @@ def _writer_prefix(sym, writer):
     return _decl_prefix(writer.gen_vardecl(sym))
 
 
-def _rank_and_shape(sym):
+def _rank_and_shape(sym: Symbol) -> tuple[int | None, ShapeKind | None]:
     """Return ``(rank, shape_kind)`` for a symbol.
 
     Explicit-shape and multi-rank arrays carry an ``ArrayBounds`` per
@@ -272,7 +287,7 @@ def _rank_and_shape(sym):
     return 0, "scalar"
 
 
-def _dummy_from_symbol(sym, writer):
+def _dummy_from_symbol(sym: Symbol, writer: FortranWriter) -> DummyArg:
     """Build a :class:`DummyArg` from a PSyIR data symbol.
 
     Populates the fields resolved so far: ``name``, ``base_type``,
@@ -317,7 +332,7 @@ def _dummy_from_symbol(sym, writer):
     )
 
 
-def extract_signature(routine):
+def extract_signature(routine: Routine) -> ProcedureSignature:
     """Build a :class:`ProcedureSignature` from a PSyIR ``Routine``.
 
     Maps :func:`_dummy_from_symbol` over the argument list and records the
