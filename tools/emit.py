@@ -37,19 +37,19 @@ def render_declaration(arg: InterfaceArg) -> str:
 def render_callback_interface(callback: CallbackInterface) -> list[str]:
     """Render a :class:`CallbackInterface` as a list of Fortran lines.
 
-    Returns the nested ``interface ... end interface`` block at column 0 with
-    its own internal two-space indentation (subroutine under interface,
-    declarations under subroutine). The parent renderer prefixes the leading
-    indent to nest the block. A function primal renders a
+    Returns the nested interface block at column 0 with its own internal two-space
+    indentation (subroutine under interface, declarations under subroutine). The parent
+    renderer prefixes the leading indent to nest the block. A function primal renders a
     ``<result_type> function`` header, a subroutine a ``subroutine`` header.
     """
     names = ", ".join(arg.name for arg in callback.args)
     if callback.kind == "function":
         header = f"{callback.result_type} function {callback.name}({names})"
-        footer = "end function"
-    else:
+    elif callback.kind == "subroutine":
         header = f"subroutine {callback.name}({names})"
-        footer = "end subroutine"
+    else:
+        raise ValueError(f"Unrecognised callback kind '{callback.kind}'.")
+    footer = f"end {callback.kind}"
 
     lines = ["interface", INDENT + header]
     for arg in callback.args:
