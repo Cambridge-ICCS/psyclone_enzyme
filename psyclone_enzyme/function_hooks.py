@@ -16,10 +16,15 @@ from psyclone.psyir.nodes import Assignment, Call, Literal, Reference, Routine
 from psyclone.psyir.symbols import (
     ArgumentInterface,
     DataSymbol,
+    RoutineSymbol,
+    UnsupportedFortranType,
 )
 
 from psyclone_enzyme.imports import _get_or_import_routine
 from psyclone_enzyme.intents import _get_call_arg_intents
+from psyclone_enzyme.interface_generation.emit import emit
+from psyclone_enzyme.interface_generation.extract import extract_signature
+from psyclone_enzyme.interface_generation.rules import build_autodiff_interface
 
 __all__ = ["add_enzyme_function_hook"]
 
@@ -79,6 +84,41 @@ def add_enzyme_function_hook(psyir, target_name, reverse=True, explicit=False):
             return
 
 
+def _generate_explicit_interface(table, call, func_name):
+    """Generate an explicit interface block for the Enzyme autodiff hook.
+
+    Resolves the callee of the given call, runs the interface-generation pipeline
+    (extract → rules → emit) on it, and injects the resulting Fortran ``interface``
+    block into the symbol table via an :py:class:`UnsupportedFortranType` declaration
+    on the hook's ``RoutineSymbol``.
+
+    :param table: the symbol table of the calling routine.
+    :type table: :py:class:`psyclone.psyir.symbols.SymbolTable`
+    :param call: the original call to the primal procedure.
+    :type call: :py:class:`psyclone.psyir.nodes.Call`
+    :param func_name: the name of the primal procedure being differentiated.
+    :type func_name: str
+    :returns: the routine symbol for the explicit hook.
+    :rtype: :py:class:`psyclone.psyir.symbols.RoutineSymbol`
+    :raises ValueError: if the callee cannot be resolved.
+    """
+    try:
+        callee, _ = call.get_callee()
+    except Exception as exc:
+        raise ValueError(
+            f"Cannot generate explicit interface for '{func_name}': "
+            f"failed to resolve the callee routine."
+        ) from exc
+
+    sig = extract_signature(callee)
+    interface_ir = build_autodiff_interface(sig)
+    raw_text = "\n".join(emit(interface_ir))
+
+    hook = table.new_symbol(interface_ir.name, symbol_type=RoutineSymbol)
+    hook._datatype = UnsupportedFortranType(raw_text)
+    return hook
+
+
 def _transform_function_call(routine, assign, call, explicit=False):
     """Insert an Enzyme call after a function assignment.
 
@@ -130,17 +170,14 @@ def _transform_function_call(routine, assign, call, explicit=False):
     # No seed is needed for the output since the procedure is a function, not a
     # subroutine.
     func = call.routine.symbol
-    hook_name = "enzyme_autodiff"
     if explicit:
-        hook_name = "_".join([func, hook_name])
+        hook = _generate_explicit_interface(table, call, func.name)
+    else:
+        hook = _get_or_import_routine(table, "enzyme_autodiff")
     hook_args = [Reference(func)]
     for arg, shadow in zip(args, shadows):
         hook_args.append(arg.copy())
         hook_args.append(Reference(shadow))
-    if explicit:
-        raise NotImplementedError("Get interface from gen_interface")  # TODO
-    else:
-        hook = _get_or_import_routine(table, hook_name)
     parent.addchild(Call.create(hook, hook_args), idx + 1 + len(shadows))
 
 
@@ -206,15 +243,13 @@ def _transform_subroutine_call(routine, call, reverse=True, explicit=False):
 
     # Call function hook with interleaved primal/shadow argument pairs.
     func = call.routine.symbol
-    hook_name = "enzyme_autodiff" if reverse else "enzyme_fwddiff"
     if explicit:
-        hook_name = "_".join([func, hook_name])
+        hook = _generate_explicit_interface(table, call, func.name)
+    else:
+        hook_name = "enzyme_autodiff" if reverse else "enzyme_fwddiff"
+        hook = _get_or_import_routine(table, hook_name)
     hook_args = [Reference(func)]
     for arg, shadow in zip(args, shadows):
         hook_args.append(arg.copy())
         hook_args.append(Reference(shadow))
-    if explicit:
-        raise NotImplementedError("Get interface from gen_interface")  # TODO
-    else:
-        hook = _get_or_import_routine(table, hook_name)
     parent.addchild(Call.create(hook, hook_args), idx + 1 + len(shadows))
