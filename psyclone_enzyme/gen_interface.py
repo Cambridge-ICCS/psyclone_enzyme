@@ -26,6 +26,7 @@ from psyclone_enzyme.interface_generation.rules import build_autodiff_interface
 __all__ = []
 
 
+# NOTE: Useful for debugging
 def _format_dummy(arg: DummyArg) -> str:
     """Render one extracted :class:`DummyArg` as an indented block.
 
@@ -76,20 +77,10 @@ def main_cli():
     routine = psyir.walk(Routine)[0]
     sig = extract_signature(routine)
 
-    # TODO: the CLI is bare minimum. Still to do next: take a routine-name argument
-    # (walk(Routine)[0] only picks the primal when it is first in the file), and
-    # print just the emitted interface instead of the _format_dummy model dump.
-    #
-    # print(f"{sig.kind} {sig.name}")
-    # for arg in sig.args:
-    #     print(_format_dummy(arg))
-    # # checks if function or subroutine
-    # if sig.return_arg is not None:
-    #     print("  returns:")
-    #     print(_format_dummy(sig.return_arg))
+    # TODO: Take a routine-name argument (walk(Routine)[0] only picks the primal when it
+    #       is first in the file), and print just the emitted interface.
 
-    # run the rest of the pipeline (rules, then emit) and print the block.
-    print()
+    # Run the rest of the pipeline (rules, emit) and then print the interface block
     print("\n".join(emit(build_autodiff_interface(sig))))
 
 
