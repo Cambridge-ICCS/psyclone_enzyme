@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-import argparse
-import sys
-from dataclasses import dataclass, replace
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Literal
 
-from psyclone.psyir.backend.fortran import FortranWriter
 from psyclone.psyir.frontend.fortran import FortranReader
 from psyclone.psyir.nodes import Routine
-from psyclone.psyir.symbols import ArgumentInterface, DataSymbol, ArrayType, ScalarType
-from psyclone.psyir.symbols.datatypes import UnsupportedFortranType
+from psyclone.psyir.symbols import (
+    ArgumentInterface,
+    ArrayType,
+    ScalarType,
+    Symbol,
+)
+from psyclone.psyir.symbols.datatypes import (
+    DataType,
+    UnsupportedFortranType,
+)
 
 Access = ArgumentInterface.Access
 
@@ -96,7 +100,7 @@ class ProcedureSignature:
     module: str | None
     uses: tuple[str, ...]
 
-def get_intent(sym):
+def get_intent(sym: Symbol) -> Intent:
     """Map a symbol's argument access onto an ``Intent`` string.
 
     Non-argument symbols (locals, a function's result symbol, imported
@@ -125,7 +129,7 @@ def get_intent(sym):
     return "unknown"
 
 
-def unwrap_unsupported(dtype):
+def unwrap_unsupported(dtype: DataType) -> tuple[DataType, str | None]:
     """Split an ``UnsupportedFortranType`` into its partial datatype.
 
     Returns the underlying datatype (the partial datatype when one is
@@ -143,7 +147,7 @@ def unwrap_unsupported(dtype):
     return dtype, raw_decl
 
 
-def get_base_type(sym):
+def get_base_type(sym: Symbol) -> BaseType:
     """Resolve a symbol's intrinsic element type to a ``BaseType``.
 
     Looks through array types to the element type, then maps the
@@ -173,7 +177,7 @@ def get_base_type(sym):
     return "unknown"
 
 
-def _split_top_level_commas(text):
+def _split_top_level_commas(text: str) -> list[str]:
     """Split ``text`` on commas that are not nested inside parentheses.
 
     Used to break a declaration prefix into its type/attribute tokens
@@ -195,7 +199,7 @@ def _split_top_level_commas(text):
     return parts
 
 
-def _decl_prefix(declaration):
+def _decl_prefix(declaration: str) -> str:
     """Return a declaration's attribute/type prefix (the text before ``::``).
 
     For ``"integer, value, intent(in) :: n"`` this returns
@@ -219,7 +223,7 @@ INTRINSIC_TYPES = (
 )
 
 
-def _base_type_from_prefix(prefix):
+def _base_type_from_prefix(prefix: str) -> BaseType:
     """Classify the leading type token of a declaration prefix as a ``BaseType``.
 
     Matching is case-insensitive. ``double precision`` maps to ``"real"``;
@@ -239,7 +243,7 @@ def _base_type_from_prefix(prefix):
     return "unknown"
 
 
-def _intent_from_prefix(prefix):
+def _intent_from_prefix(prefix: str) -> Intent:
     """Recover an ``Intent`` from an ``intent(...)`` token in the prefix.
 
     Matching is case-insensitive and tolerant of spaces (``intent ( in )``).
@@ -272,7 +276,7 @@ ATTRIBUTE_KEYWORDS = frozenset(
 )
 
 
-def _attributes_from_prefix(prefix):
+def _attributes_from_prefix(prefix: str) -> frozenset[str]:
     """Collect recognised attribute keywords (e.g. ``value``) from a prefix.
 
     Tokens that carry arguments, such as ``intent(...)`` and ``dimension(...)``,
@@ -288,7 +292,7 @@ def _attributes_from_prefix(prefix):
 # ---------------------------------------------------------------------------
 
 
-def _rank_and_shape(sym):
+def _rank_and_shape(sym: Symbol) -> tuple[int | None, ShapeKind | None]:
     """Return ``(rank, shape_kind)`` for a symbol.
 
     Explicit-shape and multi-rank arrays carry an ``ArrayBounds`` per
@@ -315,7 +319,7 @@ def _rank_and_shape(sym):
     return 0, "scalar"
 
 
-def _dummy_from_symbol(sym):
+def _dummy_from_symbol(sym: Symbol) -> DummyArg:
     """Build a :class:`DummyArg` from a PSyIR data symbol.
 
     Populates the fields resolved so far: ``name``, ``base_type``,
@@ -359,7 +363,7 @@ def _dummy_from_symbol(sym):
     )
 
 
-def extract_signature(routine):
+def extract_signature(routine: Routine) -> ProcedureSignature:
     """Build a :class:`ProcedureSignature` from a PSyIR ``Routine``.
 
     Maps :func:`_dummy_from_symbol` over the argument list and records the
@@ -392,7 +396,7 @@ def extract_signature(routine):
 # ---------------------------------------------------------------------------
 
 
-def reverse_mode_shadow_intent(procedure_kind, primal_intent):
+def reverse_mode_shadow_intent(procedure_kind: ProcedureKind, primal_intent: Intent) -> Intent:
     """Map a primal argument's intent to its reverse-mode shadow intent.
 
     The mapping depends on the procedure kind (verified against the reverse
@@ -420,7 +424,7 @@ end subroutine normalise_value
 """
 
 
-def _format_dummy(arg):
+def _format_dummy(arg: DummyArg) -> str:
     """Render one extracted :class:`DummyArg` as an indented block.
 
     Shows the fields the extraction layer currently populates; the raw
