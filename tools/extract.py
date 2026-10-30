@@ -33,6 +33,35 @@ from tools.model import (
 
 Access = ArgumentInterface.Access
 
+# The five intrinsic *type classes* (BaseType) are real, complex, integer,
+# logical, character. "double precision" is the real
+# type with a double-precision kind, so it maps to "real" below.
+INTRINSIC_TYPES = (
+    "double precision",
+    "real",
+    "complex",
+    "integer",
+    "logical",
+    "character",
+)
+
+# Attribute keywords a data dummy argument may carry.
+# intent(...), dimension(...) and codimension[...] have dedicated fields
+# (intent, rank/shape_kind, coarray) so are excluded. bind(c) is excluded because a data dummy
+# argument cannot carry it (a BIND(C) variable must be a module variable or common block).
+ATTRIBUTE_KEYWORDS = frozenset(
+    {
+        "value",
+        "optional",
+        "pointer",
+        "allocatable",
+        "target",
+        "contiguous",
+        "asynchronous",
+        "volatile",
+    }
+)
+
 
 def get_intent(sym: Symbol) -> Intent:
     """Map a symbol's argument access onto an ``Intent`` string.
@@ -144,19 +173,6 @@ def _decl_prefix(declaration: str) -> str:
     return declaration.split("::", 1)[0].strip()
 
 
-# The five intrinsic *type classes* (BaseType) are real, complex, integer,
-# logical, character. "double precision" is the real
-# type with a double-precision kind, so it maps to "real" below.
-INTRINSIC_TYPES = (
-    "double precision",
-    "real",
-    "complex",
-    "integer",
-    "logical",
-    "character",
-)
-
-
 def _base_type_from_prefix(prefix: str) -> BaseType:
     """Classify the leading type token of a declaration prefix as a ``BaseType``.
 
@@ -200,24 +216,6 @@ def _intent_from_prefix(prefix: str) -> Intent:
             if inner in ("in", "out", "inout"):
                 return inner
     return "unknown"
-
-
-# Attribute keywords a data dummy argument may carry.
-# intent(...), dimension(...) and codimension[...] have dedicated fields
-# (intent, rank/shape_kind, coarray) so are excluded. bind(c) is excluded because a data dummy
-# argument cannot carry it (a BIND(C) variable must be a module variable or common block).
-ATTRIBUTE_KEYWORDS = frozenset(
-    {
-        "value",
-        "optional",
-        "pointer",
-        "allocatable",
-        "target",
-        "contiguous",
-        "asynchronous",
-        "volatile",
-    }
-)
 
 
 def _attributes_from_prefix(prefix: str) -> frozenset[str]:
