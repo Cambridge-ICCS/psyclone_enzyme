@@ -18,7 +18,7 @@ keywords = [
   "enzyme",
   "python",
 ]
-dependencies = ["fparser==0.2.4", "psyclone==3.3.1"]
+dependencies = ["fparser==0.2.4", "lit==18.1.8", "psyclone==3.3.1"]
 
 [project.urls]
 Repository = "https://github.com/Cambridge-ICCS/psyclone_enzyme"
