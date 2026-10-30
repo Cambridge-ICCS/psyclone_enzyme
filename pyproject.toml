@@ -18,10 +18,10 @@ keywords = [
   "enzyme",
   "python",
 ]
-dependencies = ["psyclone"]
+dependencies = ["fparser==0.2.4", "psyclone==3.3.1"]
 
 [project.urls]
 Repository = "https://github.com/Cambridge-ICCS/psyclone_enzyme"
 
-[tool.setuptools]
-packages = ["psyclone_enzyme"]
+[tool.setuptools.packages.find]
+include = ["psyclone_enzyme*"]

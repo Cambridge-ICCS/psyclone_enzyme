@@ -1,25 +1,27 @@
 """Rules: primal IR -> interface IR (reverse-mode synthesis).
 
 Stage 2 of the pipeline: the Enzyme reverse-mode rule set. Turns a
-:class:`~tools.model.ProcedureSignature` into an
-:class:`~tools.interface_model.AutodiffInterface` by naming the hook and
+:class:`~psyclone_enzyme.model.ProcedureSignature` into an
+:class:`~psyclone_enzyme.interface_model.AutodiffInterface` by naming the hook and
 callback, expanding each primal arg into a primal copy (plus a shadow for
 active args), and mirroring the primal in the nested callback interface.
 """
 
 from __future__ import annotations
 
-from tools.interface_model import (
+from psyclone_enzyme.interface_generation.interface_model import (
     AutodiffInterface,
     CallbackInterface,
     InterfaceArg,
 )
-from tools.model import (
+from psyclone_enzyme.interface_generation.model import (
     DummyArg,
     Intent,
     ProcedureKind,
     ProcedureSignature,
 )
+
+__all__ = []
 
 
 def hook_name(primal_name: str) -> str:

@@ -10,7 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from tools.model import Intent, ProcedureKind
+from psyclone_enzyme.interface_generation.model import Intent, ProcedureKind
+
+__all__ = []
 
 InterfaceArgRole = Literal["primal", "shadow", "descriptor"]
 
