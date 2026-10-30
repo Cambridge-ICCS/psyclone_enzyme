@@ -50,6 +50,36 @@ Intent = Literal["in", "out", "inout", "unknown"]
 ProcedureKind = Literal["subroutine", "function"]
 ArgKind = Literal["data", "procedure"]
 
+# The five intrinsic *type classes* (BaseType) are real, complex, integer,
+# logical, character. "double precision" is the real
+# type with a double-precision kind, so it maps to "real" below.
+INTRINSIC_TYPES = (
+    "double precision",
+    "real",
+    "complex",
+    "integer",
+    "logical",
+    "character",
+)
+
+# Attribute keywords a data dummy argument may carry.
+# intent(...), dimension(...) and codimension[...] have dedicated fields
+# (intent, rank/shape_kind, coarray) so are excluded. bind(c) is excluded because a data
+# dummy argument cannot carry it (a BIND(C) variable must be a module variable or common
+# block).
+ATTRIBUTE_KEYWORDS = frozenset(
+    {
+        "value",
+        "optional",
+        "pointer",
+        "allocatable",
+        "target",
+        "contiguous",
+        "asynchronous",
+        "volatile",
+    }
+)
+
 
 @dataclass(frozen=True)
 class DummyArg:
@@ -218,19 +248,6 @@ def _decl_prefix(declaration: str) -> str:
     return declaration.split("::", 1)[0].strip()
 
 
-# The five intrinsic *type classes* (BaseType) are real, complex, integer,
-# logical, character. "double precision" is the real
-# type with a double-precision kind, so it maps to "real" below.
-INTRINSIC_TYPES = (
-    "double precision",
-    "real",
-    "complex",
-    "integer",
-    "logical",
-    "character",
-)
-
-
 def _base_type_from_prefix(prefix: str) -> BaseType:
     """Classify the leading type token of a declaration prefix as a ``BaseType``.
 
@@ -264,24 +281,6 @@ def _intent_from_prefix(prefix: str) -> Intent:
             if inner in ("in", "out", "inout"):
                 return inner
     return "unknown"
-
-
-# Attribute keywords a data dummy argument may carry.
-# intent(...), dimension(...) and codimension[...] have dedicated fields
-# (intent, rank/shape_kind, coarray) so are excluded. bind(c) is excluded because a data dummy
-# argument cannot carry it (a BIND(C) variable must be a module variable or common block).
-ATTRIBUTE_KEYWORDS = frozenset(
-    {
-        "value",
-        "optional",
-        "pointer",
-        "allocatable",
-        "target",
-        "contiguous",
-        "asynchronous",
-        "volatile",
-    }
-)
 
 
 def _attributes_from_prefix(prefix: str) -> frozenset[str]:
@@ -422,16 +421,6 @@ def reverse_mode_shadow_intent(
     }[primal_intent]
 
 
-SOURCE = """
-subroutine normalise_value(n, x, y)
-  integer, value, intent(in) :: n
-  real, dimension(n), intent(in) :: x
-  real, dimension(n), intent(out) :: y
-  y(:) = x / sum(x)
-end subroutine normalise_value
-"""
-
-
 def _format_dummy(arg: DummyArg) -> str:
     """Render one extracted :class:`DummyArg` as an indented block.
 
@@ -455,8 +444,16 @@ def _format_dummy(arg: DummyArg) -> str:
 
 
 if __name__ == "__main__":
+    test_code = """
+    subroutine normalise_value(n, x, y)
+    integer, value, intent(in) :: n
+    real, dimension(n), intent(in) :: x
+    real, dimension(n), intent(out) :: y
+    y(:) = x / sum(x)
+    end subroutine normalise_value
+    """
     reader = FortranReader()
-    psyir = reader.psyir_from_source(SOURCE)
+    psyir = reader.psyir_from_source(test_code)
     routine = psyir.walk(Routine)[0]
     sig = extract_signature(routine)
 
