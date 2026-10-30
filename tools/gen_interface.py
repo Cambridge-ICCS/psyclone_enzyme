@@ -195,7 +195,7 @@ def get_base_type(sym: Symbol) -> BaseType:
     dtype, raw_decl = unwrap_unsupported(sym.datatype)
 
     if isinstance(dtype, ArrayType):
-        elem_type = dtype.datatype
+        elem_type = dtype.elemental_type
     else:
         elem_type = dtype
 
