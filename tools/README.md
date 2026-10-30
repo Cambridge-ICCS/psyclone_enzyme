@@ -29,7 +29,7 @@ Install the pinned dependencies from the repo root:
 ```sh
 python -m venv venv
 source venv/bin/activate
-pip install -r tools/requirements.txt
+pip install .
 ```
 
 `PSyclone` is pinned to `3.2.2`. See "Troubleshooting" below for why the latest
@@ -86,6 +86,6 @@ under `3.3.0`.
 Fix: install the pinned version.
 
 ```sh
-pip install -r tools/requirements.txt   # PSyclone==3.2.2
+pip install .   # PSyclone==3.2.2
 ```
 
