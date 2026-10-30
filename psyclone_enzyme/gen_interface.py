@@ -15,7 +15,6 @@ Usage:  python gen_interface.py <source.f90>
 import argparse
 import sys
 from pathlib import Path
-from typing import Namespace
 
 from psyclone.psyir.frontend.fortran import FortranReader
 from psyclone.psyir.nodes import Routine
@@ -52,7 +51,7 @@ def _format_dummy(arg: DummyArg) -> str:
         lines.append(f"    raw_text   = {arg.raw_text!r}")
     return "\n".join(lines)
 
-def parse_user_input() -> Namespace:
+def parse_user_input() -> argparse.Namespace:
     """Retrieve command line options."""
     parser = argparse.ArgumentParser(
         description="Generate the Enzyme autodiff interface for a primal routine."
