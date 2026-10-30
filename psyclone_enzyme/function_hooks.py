@@ -244,6 +244,10 @@ def _transform_subroutine_call(routine, call, reverse=True, explicit=False):
     # Call function hook with interleaved primal/shadow argument pairs.
     func = call.routine.symbol
     if explicit:
+        if not reverse:
+            raise NotImplementedError(
+                "Forward-mode explicit interface generation not yet implemented"
+            )
         hook = _generate_explicit_interface(table, call, func.name)
     else:
         hook_name = "enzyme_autodiff" if reverse else "enzyme_fwddiff"
