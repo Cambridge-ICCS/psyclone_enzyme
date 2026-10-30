@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from tools.emit import emit
 from tools.extract import extract_signature
+from tools.model import DummyArg
 from tools.rules import build_autodiff_interface
 
 
