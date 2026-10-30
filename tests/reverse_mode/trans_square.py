@@ -1,5 +1,5 @@
 """Module containing the transformation function for tests``test_square_*.f90``."""
-from psyclone_enzyme import add_enzyme_autodiff
+from psyclone_enzyme import add_enzyme_function_hook
 
 
 def trans(psyir):
@@ -11,4 +11,4 @@ def trans(psyir):
     :param psyir: root of the PSyIR tree to transform.
     :type psyir: :py:class:`psyclone.psyir.nodes.FileContainer`
     """
-    add_enzyme_autodiff(psyir, "square")
+    add_enzyme_function_hook(psyir, "square", reverse=True)
