@@ -13,6 +13,26 @@ __all__ = []
 INTEGER_TYPE = ScalarType(ScalarType.Intrinsic.INTEGER, ScalarType.Precision.UNDEFINED)
 
 
+def _get_or_import_enzyme_mod(table):
+    """Load the Enzyme Fortran module.
+
+    :param table: the symbol table to look up/extend.
+    :type table: :py:class:`psyclone.psyir.symbols.SymbolTable`
+    :return: the symbol for the Enzyme Fortran module
+    :rtype: :py:class:`psyclone.psyir.symbols.ContainerSymbol`
+    """
+    try:
+        enzyme_mod = table.lookup("enzyme")
+        if not isinstance(enzyme_mod, ContainerSymbol):
+            raise ImportError(
+                f"Cannot bring {routine} into scope. Is something else named 'enzyme'"
+                " in scope?"
+            )
+    except KeyError:
+        enzyme_mod = table.new_symbol("enzyme", symbol_type=ContainerSymbol)
+    return enzyme_mod
+
+
 def _get_or_import_routine(table, routine):
     """Return a RoutineSymbol in the given symbol table.
 
@@ -34,19 +54,12 @@ def _get_or_import_routine(table, routine):
             autodiff.specialise(RoutineSymbol)
         return autodiff
     except (KeyError, TypeError):
-        pass  # Fall through and import the symbol from the enzyme module.
-    try:
-        enzyme_mod = table.lookup("enzyme")
-        if not isinstance(enzyme_mod, ContainerSymbol):
-            raise ImportError(
-                f"Cannot bring {routine} into scope. Is something else named 'enzyme'"
-                " in scope?"
-            )
-    except KeyError:
-        enzyme_mod = table.new_symbol("enzyme", symbol_type=ContainerSymbol)
-    return table.new_symbol(
-        routine, symbol_type=RoutineSymbol, interface=ImportInterface(enzyme_mod)
-)
+        # Fall through and import the symbol from the enzyme module.
+        return table.new_symbol(
+            routine,
+            symbol_type=RoutineSymbol,
+            interface=ImportInterface(_get_or_import_enzyme_mod(table))
+        )
 
 
 def _get_or_import_descriptor(table, descriptor):
@@ -70,16 +83,10 @@ def _get_or_import_descriptor(table, descriptor):
             desc.specialise(DataSymbol)
         return desc
     except (KeyError, TypeError):
-        pass  # Fall through and import the symbol from the enzyme module.
-    try:
-        enzyme_mod = table.lookup("enzyme")
-        if not isinstance(enzyme_mod, ContainerSymbol):
-            raise ImportError(
-                f"Cannot bring {descriptor} into scope. Is something else named"
-                " 'enzyme' in scope?"
-            )
-    except KeyError:
-        enzyme_mod = table.new_symbol("enzyme", symbol_type=ContainerSymbol)
-    return table.new_symbol(
-        descriptor, symbol_type=DataSymbol, datatype=INTEGER_TYPE, interface=ImportInterface(enzyme_mod)
-)
+        # Fall through and import the symbol from the enzyme module.
+        return table.new_symbol(
+            descriptor,
+            symbol_type=DataSymbol,
+            datatype=INTEGER_TYPE,
+            interface=ImportInterface(_get_or_import_enzyme_mod(table))
+        )
