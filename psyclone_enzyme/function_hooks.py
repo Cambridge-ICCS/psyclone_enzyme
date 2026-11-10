@@ -20,7 +20,7 @@ from psyclone.psyir.symbols import (
     UnsupportedFortranType,
 )
 
-from psyclone_enzyme.imports import _get_or_import_routine
+from psyclone_enzyme.imports import _get_or_import_descriptor, _get_or_import_routine
 from psyclone_enzyme.intents import _get_call_arg_intents
 from psyclone_enzyme.interface_generation.emit import emit
 from psyclone_enzyme.interface_generation.extract import extract_signature
@@ -29,7 +29,9 @@ from psyclone_enzyme.interface_generation.rules import build_autodiff_interface
 __all__ = ["add_enzyme_function_hook"]
 
 
-def add_enzyme_function_hook(psyir, target_name, reverse=True, explicit=False):
+def add_enzyme_function_hook(
+    psyir, target_name, reverse=True, explicit=False, activity_descriptors=None
+):
     """Insert a function hook call after the first call to the target procedure in each
     routine in the PSyIR tree.
 
@@ -59,7 +61,16 @@ def add_enzyme_function_hook(psyir, target_name, reverse=True, explicit=False):
     :param explicit: generate an explicit interface block if True else use the implicit
         interfaces from the `enzyme` Fortran module
     :type explicit: bool
+    :param activity_descriptors: map of activity descriptors to argument names
+    :type activity_descriptors: dict
+    :raises ValueError: if ``explicit`` and ``activity_descriptors`` are both given,
+        since the generated explicit interface has no activity-descriptor arguments.
     """
+    if explicit and activity_descriptors is not None:
+        raise ValueError(
+            "activity_descriptors are not supported with explicit=True: the"
+            " generated interface block has no activity-descriptor arguments"
+        )
     for routine in psyir.walk(Routine):
         # Function form: <y> = <f>(<x1>, <x2>, ...).
         for assign in routine.walk(Assignment, stop_type=Assignment):
@@ -71,7 +82,9 @@ def add_enzyme_function_hook(psyir, target_name, reverse=True, explicit=False):
                     "Forward mode not yet implemented for functions because an"
                     " additional return value would be required"
                 )
-            _transform_function_call(routine, assign, rhs, explicit)
+            _transform_function_call(
+                routine, assign, rhs, explicit, activity_descriptors
+            )
             return
 
         # Subroutine form: call <f>(<arg1>, <arg2>, ...) with mixed intents.
@@ -80,7 +93,9 @@ def add_enzyme_function_hook(psyir, target_name, reverse=True, explicit=False):
                 continue  # Already handled by the loop above.
             if call.routine.name != target_name:
                 continue
-            _transform_subroutine_call(routine, call, reverse, explicit)
+            _transform_subroutine_call(
+                routine, call, reverse, explicit, activity_descriptors
+            )
             return
 
 
@@ -122,7 +137,9 @@ def _generate_explicit_interface(table, call, func_name):
     return hook
 
 
-def _transform_function_call(routine, assign, call, explicit=False):
+def _transform_function_call(
+    routine, assign, call, explicit=False, activity_descriptors=None
+):
     """Insert an Enzyme call after a function assignment.
 
     Given the form ``<y> = <f>(<x1>, <x2>, ...)``, a shadow variable ``d<xi>`` is
@@ -133,6 +150,10 @@ def _transform_function_call(routine, assign, call, explicit=False):
     (e.g. via a ``use enzyme`` statement), an import from the ``enzyme`` module is added
     to the routine's symbol table so that a ``use enzyme`` statement is generated in the
     output code.
+
+    If ``activity_descriptors`` is provided then it should be a dictionary mapping the
+    names of the function arguments to the activity descriptors to apply to them,
+    e.g., "enzyme_dup", "enzyme_const".
 
     In the case of functions, it only makes sense to use `enzyme_autodiff`, so reverse
     mode is assumed.
@@ -146,6 +167,8 @@ def _transform_function_call(routine, assign, call, explicit=False):
     :param explicit: generate an explicit interface block if True else use the implicit
         interfaces from the `enzyme` Fortran module
     :type explicit: bool
+    :param activity_descriptors: map of activity descriptors to argument names
+    :type activity_descriptors: dict
     """
     table = routine.symbol_table
     args = call.arguments
@@ -179,12 +202,23 @@ def _transform_function_call(routine, assign, call, explicit=False):
         hook = _get_or_import_routine(table, "enzyme_autodiff")
     hook_args = [Reference(func)]
     for arg, shadow in zip(args, shadows):
+        if activity_descriptors is not None:
+            try:
+                descriptor = activity_descriptors[arg.name]
+                hook_args.append(
+                    Reference(_get_or_import_descriptor(table, descriptor))
+                )
+            except KeyError as ke:
+                msg = f"Invalid argument name '{arg.name}' in activity descriptor map."
+                raise KeyError(msg) from ke
         hook_args.append(arg.copy())
         hook_args.append(Reference(shadow))
     parent.addchild(Call.create(hook, hook_args), idx + 1 + len(shadows))
 
 
-def _transform_subroutine_call(routine, call, reverse=True, explicit=False):
+def _transform_subroutine_call(
+    routine, call, reverse=True, explicit=False, activity_descriptors=None
+):
     """Insert an Enzyme call after a standalone subroutine call.
 
     Given the form ``call <f>(<arg1>, <arg2>, ...)``, a shadow variable is created for
@@ -198,6 +232,10 @@ def _transform_subroutine_call(routine, call, reverse=True, explicit=False):
     (e.g. via a ``use enzyme`` statement), an import from the ``enzyme`` module is added
     to the routine's symbol table so that a ``use enzyme`` statement is generated in the
     output code.
+
+    If ``activity_descriptors`` is provided then it should be a dictionary mapping the
+    names of the subroutine arguments to the activity descriptors to apply to them,
+    e.g., "enzyme_dup", "enzyme_const".
 
     Keyword arguments in any order are handled correctly via the argument mapping
     returned by ``Call.get_callee()``. If the callee cannot be resolved (e.g. due to a
@@ -213,6 +251,8 @@ def _transform_subroutine_call(routine, call, reverse=True, explicit=False):
     :param explicit: generate an explicit interface block if True else use the implicit
         interfaces from the `enzyme` Fortran module
     :type explicit: bool
+    :param activity_descriptors: map of activity descriptors to argument names
+    :type activity_descriptors: dict[str, str]
     """
     table = routine.symbol_table
     args = call.arguments
@@ -257,6 +297,15 @@ def _transform_subroutine_call(routine, call, reverse=True, explicit=False):
         hook = _get_or_import_routine(table, hook_name)
     hook_args = [Reference(func)]
     for arg, shadow in zip(args, shadows):
+        if activity_descriptors is not None:
+            try:
+                descriptor = activity_descriptors[arg.name]
+                hook_args.append(
+                    Reference(_get_or_import_descriptor(table, descriptor))
+                )
+            except KeyError as ke:
+                msg = f"Invalid argument name '{arg.name}' in activity descriptor map."
+                raise KeyError(msg) from ke
         hook_args.append(arg.copy())
         hook_args.append(Reference(shadow))
     parent.addchild(Call.create(hook, hook_args), idx + 1 + len(shadows))
