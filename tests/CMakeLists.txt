@@ -29,30 +29,35 @@ configure_lit_site_cfg(
 set(PSYCLONE_PROCESSED_SOURCES)
 
 # Test directories, one per differentiation mode handled by
-# psyclone_enzyme. Each holds its own trans_<name>_<variant>.py scripts and
+# psyclone_enzyme. Each holds its own trans_<name>_<interface_type>.py scripts and
 # test_<name>_*.f90 inputs.
 set(PSYCLONE_TEST_DIRS reverse_mode forward_mode)
 
 # Test names: for each name, every mode directory listed in
 # PSYCLONE_TEST_DIRS provides one or more inputs test_<name>_*.f90
-# and two transformation scripts trans_<name>_implicit.py and
-# trans_<name>_explicit.py.
+# and, for each interface type and activity set, a transformation script
+# trans_<name>_<interface_type>_<activity_set>.py.
 set(TEST_NAMES square)
 
-# Interface variants: implicit (use the enzyme module) or explicit
+# Interface types: implicit (use the enzyme module) or explicit
 # (generate a Fortran interface block).
-set(TEST_VARIANTS implicit explicit)
+set(TEST_INTERFACE_TYPES implicit explicit)
+
+# Activity descriptor sets: default (no descriptors passed to the hook) or
+# descriptors (explicit per-argument activity descriptors such as enzyme_dup).
+set(TEST_ACTIVITY_SETS default descriptors)
 
 # For every test_<name>_*.f90 file in <mode_dir>, declare a rule that
-# runs PSyclone with <mode_dir>/trans_<name>_<variant>.py to produce the
-# processed file under
-# ${CMAKE_CURRENT_BINARY_DIR}/<mode_dir>/processed/<variant>/, and append
-# it to PSYCLONE_PROCESSED_SOURCES. A macro rather than a function so
+# runs PSyclone with <mode_dir>/trans_<name>_<interface_type>_<activity_set>.py
+# to produce the processed file under
+# ${CMAKE_CURRENT_BINARY_DIR}/<mode_dir>/processed/<interface_type>/<activity_set>/,
+# and append it to PSYCLONE_PROCESSED_SOURCES. A macro rather than a function so
 # that the APPEND updates the parent-scope list in place.
-macro(psyclone_enrol_tests mode_dir name variant)
+macro(psyclone_enrol_tests mode_dir name interface_type activity_set)
   set(TRANS_SCRIPT
-      "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/trans_${name}_${variant}.py")
-  # Skip (mode, name, variant) combinations that have no trans script.
+      "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/trans_${name}_${interface_type}_${activity_set}.py")
+  # Skip (mode, name, interface_type, activity_set) combinations that have no
+  # trans script.
   if(EXISTS "${TRANS_SCRIPT}")
     file(GLOB PSYCLONE_TEST_SOURCES CONFIGURE_DEPENDS
          "${CMAKE_CURRENT_SOURCE_DIR}/${mode_dir}/test_${name}_*.f90")
@@ -60,12 +65,12 @@ macro(psyclone_enrol_tests mode_dir name variant)
     foreach(src IN LISTS PSYCLONE_TEST_SOURCES)
       get_filename_component(fname "${src}" NAME)
       set(out
-          "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${variant}/${fname}")
+          "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${interface_type}/${activity_set}/${fname}")
       add_custom_command(
         OUTPUT "${out}"
         COMMAND
           ${CMAKE_COMMAND} -E make_directory
-          "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${variant}"
+          "${CMAKE_CURRENT_BINARY_DIR}/${mode_dir}/processed/${interface_type}/${activity_set}"
         COMMAND
           # fmt: off
           ${PSYCLONE_EXECUTABLE}
@@ -75,7 +80,7 @@ macro(psyclone_enrol_tests mode_dir name variant)
             "${src}"
           # fmt: on
         DEPENDS "${src}" "${TRANS_SCRIPT}"
-        COMMENT "PSyclone: ${mode_dir}/${variant}/${fname}"
+        COMMENT "PSyclone: ${mode_dir}/${interface_type}/${activity_set}/${fname}"
         VERBATIM)
       list(APPEND PSYCLONE_PROCESSED_SOURCES "${out}")
     endforeach()
@@ -84,8 +89,10 @@ endmacro()
 
 foreach(mode_dir IN LISTS PSYCLONE_TEST_DIRS)
   foreach(name IN LISTS TEST_NAMES)
-    foreach(variant IN LISTS TEST_VARIANTS)
-      psyclone_enrol_tests(${mode_dir} ${name} ${variant})
+    foreach(interface_type IN LISTS TEST_INTERFACE_TYPES)
+      foreach(activity_set IN LISTS TEST_ACTIVITY_SETS)
+        psyclone_enrol_tests(${mode_dir} ${name} ${interface_type} ${activity_set})
+      endforeach()
     endforeach()
   endforeach()
 endforeach()
