@@ -30,7 +30,8 @@ def _get_or_import_routine(table, routine):
     """
     try:
         autodiff = table.lookup(routine)
-        autodiff.specialise(RoutineSymbol)
+        if not isinstance(autodiff, RoutineSymbol):
+            autodiff.specialise(RoutineSymbol)
         return autodiff
     except (KeyError, TypeError):
         pass  # Fall through and import the symbol from the enzyme module.
@@ -65,7 +66,8 @@ def _get_or_import_descriptor(table, descriptor):
     """
     try:
         desc = table.lookup(descriptor)
-        desc.specialise(DataSymbol)
+        if not isinstance(desc, DataSymbol):
+            desc.specialise(DataSymbol)
         return desc
     except (KeyError, TypeError):
         pass  # Fall through and import the symbol from the enzyme module.
