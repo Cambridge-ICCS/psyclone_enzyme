@@ -63,7 +63,14 @@ def add_enzyme_function_hook(
     :type explicit: bool
     :param activity_descriptors: map of activity descriptors to argument names
     :type activity_descriptors: dict
+    :raises ValueError: if ``explicit`` and ``activity_descriptors`` are both given,
+        since the generated explicit interface has no activity-descriptor arguments.
     """
+    if explicit and activity_descriptors is not None:
+        raise ValueError(
+            "activity_descriptors are not supported with explicit=True: the"
+            " generated interface block has no activity-descriptor arguments"
+        )
     for routine in psyir.walk(Routine):
         # Function form: <y> = <f>(<x1>, <x2>, ...).
         for assign in routine.walk(Assignment, stop_type=Assignment):
